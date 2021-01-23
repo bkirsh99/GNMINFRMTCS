@@ -1,0 +1,474 @@
+---
+title: "BMEG 400E: Assignment 1"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment Overview
+
+For this assignment we will be using data from a Chromatin Immunoprecipitation sequencing (ChIP-seq) produced by Choi, Won-Young, et al., (2020). [*https://pubmed.ncbi.nlm.nih.gov/33293480/*](https://pubmed.ncbi.nlm.nih.gov/33293480/){.uri}. This data is part of a series of experiments that aimed to understand the chromatin changes that happen when an induced Pluripotent Stem Cell (iPSC) undergo differentiation towards a Neuronal Progenitor Cell (NPC). The **fastq** files from this experiment have been pre-downloaded and added to the server, under the following path: **/usr/local/share/data/assignment_1/**. The datasets that we will be using for the assignment are in a shared *reading only* location that you can read but ARE NOT allowed to alter.
+
+This assignment has 3 main goals:
+
+1.  Get familiar with the server
+
+2.  Manage a conda environment
+
+3.  Perform an alignment against the human genome
+
+## 0. Starting Github
+
+Before we can jump in to the lecture, we need to make sure you have a Github repository you can use to upload the assignment. If you still haven't set up a Github account, now is the time to do so! Further instructions on how to install Github to your local computer and connect it to RStudio can be found here:[**https://happygitwithr.com/index.html**](https://happygitwithr.com/index.html){.uri}
+
+a.  Create a private repository on Github - 1pt
+
+[Done. I named it "GNMINFRMTCS" and it is available at <https://github.com/bkirsh99/GNMINFRMTCS>.]{style="color:red"}
+
+b.  Add **BMEGGenoInfo** as collaborator - 1pt
+
+<!-- -->
+
+    - Go to the GitHub website of the repository you created on point a
+
+    - Go to the *Settings* tab
+
+    - Select the *Manage access* option on the menu displayed on the left
+
+    - Click on *Invite a collaborator* 
+
+    - Search for *BMEGGenoInfo* and add as collaborator
+
+[Done.]{style="color:red"}
+
+c.  Clone the repository on your local computer - 1pt
+
+[Done.]{style="color:red"}
+
+## 2. Getting Familiar with the Server
+
+For our course we will be using a server based on a Centos system. This will be the place where you will do the assignments and project. The server has limited storage and computer power. Therefore, you will be required to be mindful of the processes you run as well as the files you keep.
+
+To join the server you will need to be on an active connection of a UBC Virtual Private Network (VPN). If you do not have one already, you can check how to install it here: [*https://it.ubc.ca/services/email-voice-internet/myvpn/setup-documents*](https://it.ubc.ca/services/email-voice-internet/myvpn/setup-documents){.uri}. Once the VPN has been set, you will need to open a terminal.
+
+-   **Windows system:**
+
+    a.  Install a terminal emulator like Putty ([*https://www.chiark.greenend.org.uk/\~sgtatham/putty/latest.html*](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html){.uri}).
+    b.  This will allow you to do a SSH connection using the server's IP (137.82.55.186) and your credentials.
+
+-   **Linux/Unix system (Apple computer and Ubuntu):**
+
+    a.  Open a terminal
+    b.  Type the following command: ssh [username\@137.82.55.186](mailto:username@137.82.55.186){.email}
+    c.  When prompted, type your password to complete the login
+
+[Done.]{style="color:red"}
+
+Now that you have successfully joined the server, let's get you used to some basic commands
+
+[Moving forward, my answers can be found embedded within the code chunks. While comments in bash are preceded by the hash mark, I adopted the convention of using the 'greater than' sign (\>) before any of my own explanations. In a real-life scenario, this would cause an interpreter error. However, in this assignment, it will help distinguish the questions, the code, and the written answers.]{style="color:red"}
+
+### a. Creating a directory
+
+```{bash, eval=FALSE}
+
+## Create a new directory (folder) for this assignment - 1pt 
+## Tip: look at the help of the *mkdir* command (man mkdir)
+
+mkdir assignment1
+
+```
+
+*Note:* Generally speaking, is good to follow naming convention when using the terminal. Remember:
+
+-   Do not start a name with a number
+
+-   Names are case sensitive (ASSIGNMENT1.txt and assignment1.txt are not the same)
+
+-   Avoid to use spaces, as they are interpreted as special characters by the computer
+
+-   Use \_ or - to replace spaces
+
+-   File extensions are meaningful for us to know the file format but in terminal you can use it as part of the file name. Ex: you will be able to open a .sequences file that has tab delimited information
+
+### b. Check a directory's path
+
+When using terminal, paths work as the addresses of the files and directories you want to access and easily move between them.
+
+```{bash, eval=FALSE}
+## Check your current directory's path: 0.5 pt
+## Tip: look at the documentation of the *pwd* command (man pwd)
+
+pwd
+
+  > The output is: /home/bkirsh
+
+```
+
+### c. Moving within directories
+
+Access the newly created directory
+
+```{bash, eval=FALSE}
+## Move to your newly created directory - 0.5 pt 
+## Tip: look at the *cd* command documentation
+
+cd assignment1
+
+```
+
+How would you move back to your home directory (*/home/your_user_name*)?
+
+```{bash, eval=FALSE}
+
+#Check the tutorial: https://www.computerhope.com/unix/ucd.htm 
+
+## Using the complete directory path of your home directory: - 0.25 pt
+
+cd /home/bkirsh
+
+## Using the "go to parent directory" shortcut - 0.25
+
+  > First, I used the *cd* command to re-enter my newly created directory. Then, I used the "go to parent directory" shortcut.
+
+cd assignment1
+cd ..
+
+
+```
+
+### d. Explore the dataset
+
+The sequencing data that we will be using is paired-end. This means that each DNA fragment in the sequencer has been sequenced twice, one on each end (5' and 3'). Choose one of the reads files (1 or 2) for the following exercises.
+
+```{bash, eval=FALSE}
+
+## Look at the first 5 rows of the dataset - 0.25
+# Tip: look at the *head* command documentation (man head)
+
+head -n 5 /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq
+
+## Look at the last 6 rows of the dataset - 0.25
+# Tip: look at the *tail* command documentation (man tail)
+
+tail -n 6 /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq
+
+## Explore the file with the *less* command (Exit pressing: q) - 0.25
+
+  > By pressing the space bar, more file content is revealed incrementally.
+
+less /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq
+q
+
+```
+
+### e. Piping
+
+Because this is a very large dataset we will proceed to subset it in order to make it more manageable for the assignment. Using the commands that you learned above:
+
+```{bash, eval=FALSE}
+
+## How many lines does the file was in total? - 0.5
+#Tip: look at the *wc* command documentation (man wc)
+
+wc -l /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq
+
+  > The output is: 2670228
+
+## Select only the id lines (e.g. @SRR12506919.667552 667552 length=151) of the dataset (the ones that start with @ and are followed by the read id) - 0.75 pt
+## Tip: look at the *grep* command
+
+grep @ /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq
+
+## How many reads are in the file? - 1 pt
+## Tip: Try using * | head * after the command line you use for the previous question
+
+grep @ /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq | wc -l
+
+> The output is: 667557
+
+## Select only the reads id (e.g. @SRR12506919.667552) from the id lines - 1.25 pt
+## Tip: Look into the *cut* command. Carefully read the default delimiter, is it the case for our file?
+
+  > The default delimiter for *cut* is the tab character, but our file is space-delimited. Therefore, we must specify the space delimiter by using the -d option. Additionally, we must indicate the filed number by using the -f option to extract only the column containing the read ids.
+
+grep @ /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq | cut -f 1 -d ' '
+
+```
+
+### f. Saving an output
+
+```{bash, eval=FALSE}
+
+## Save a file that contains only the reads ids (the result of our previous exercise). - 0.5 pt
+## Tip: Search in Google how to write an output on bash/terminal to a file
+
+grep @ /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq | cut -f 1 -d ' ' > assignment1/read_ids.txt
+
+## Now, list all the files in a directory: 
+## Tip: look at the *ls* command
+
+ls assignment1
+
+# What do you see? Was the subset file created correctly? - 0.25 pt
+## ----
+
+  > The output of the *ls* command is read_ids.txt, which indicates that this file exists within the assignment1 directory. However, it doesn't provide information about the contents of the file (e.g. empty or corrupted), so we can include the -l flag to verify its size (1). In addition, we can use the *cat* command to ensure that the constituents of the file are as expected (2) or the *wc -l* command to verify that it contains 667557 lines, as outputted by `grep @ /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq | wc -l` (3). Below are the commands for (1), (2), and (3).
+  
+ls -l assignment1  
+cat assignment1/read_ids.txt | head
+wc -l assignment1/read_ids.txt
+
+```
+
+### g. Creating a backup
+
+There will be times where you will want to save a copy of a dataset or file before modifying in case something goes wrong. For those cases, you can create a copy of any file or directory using the "copy" command
+
+```{bash, eval=FALSE}
+
+## Create a copy of the reads ids file - 0.25 pt
+## Tip: man cp
+
+cp assignment1/read_ids.txt assignment1/copy_read_ids.txt
+
+## Change the name of the backup reads id file - 0.25 pt
+## Tip: man mv
+
+mv assignment1/copy_read_ids.txt assignment1/renamed_copy_read_ids.txt
+
+## Delete the copy of the reads id file - 0.25 pt
+## Tip: man rm
+
+rm assignment1/renamed_copy_read_ids.txt
+
+```
+
+## 3. Managing Conda Environments
+
+### a. Create a conda environment
+
+In order to run the reads alignments against the human genome, there are a few tools that we will need:
+
+-   fastQC ([*https://www.bioinformatics.babraham.ac.uk/projects/fastqc/*](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/){.uri}): comprehensive quality control measures of sequencing data.
+
+-   bowtie2 ([*http://bowtie-bio.sourceforge.net/bowtie2/index.shtml*](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml){.uri}): alignments of sequencing data.
+
+-   samtools ([*http://www.htslib.org/doc/samtools.html*](http://www.htslib.org/doc/samtools.html){.uri}): set of tools to manage sam/bam alignment files
+
+To install them, we will be making use of the conda environments. Conda allows you to create and manage environments for any programming language. Managing this environments mean that you can work with specific versions of different programs at any given moment, simply by loading the desired environment. You can find more information about this resource here: [*https://docs.conda.io/en/latest/*](https://docs.conda.io/en/latest/){.uri} .
+
+```{bash, eval=FALSE}
+## Create a new conda environment: - 0.5 pt
+# Tip: Consult the previously provide links or consult the conda create help (conda create --help)
+
+conda create -n test_env
+
+```
+
+### b. Add programs to your conda environment
+
+Now that the environment has been created, its time to add the packages that we will need. Conda has an active community and a great documentation ([*https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html*](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html){.uri}) which you can use throughout the course to help answer any questions you may have.
+
+```{bash, eval=FALSE}
+
+## Add fastQC and bowtie2 to your conda environment: - 1.5 pt
+
+conda install -n test_env -c bioconda fastqc bowtie2
+
+## Run the following command to install samtools onto your conda environment:
+
+conda config --add channels bioconda 
+conda config --add channels conda-forge 
+conda install -n test_env samtools==1.11
+
+```
+
+## 4. Performing Alignments
+
+### a. Data quality check
+
+We will use the widely used fastQC software to do a quick inspection of the data quality. Once it has run, it will give you an html report of the quality of the data, that you can open using a web browser. More information on how to read the output can be found here: [*https://dnacore.missouri.edu/PDF/FastQC_Manual.pdf*](https://dnacore.missouri.edu/PDF/FastQC_Manual.pdf){.uri} and on the tool's website.
+
+```{bash, eval=FALSE}
+
+## IMPORTANT NOTE: Remember to activate your conda environment!
+
+conda activate test_env
+
+## Run fastQC on the fastq files: - 1pt
+
+cd assignment1
+mkdir fastqc_output
+fastqc /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq -o fastqc_output
+
+## In order to open the html files on your web browser you will need to download the files to your computer
+## Ubuntu/Linux and Mac users: look at the *scp* command
+## Windows users: follow the following instructions: https://stackoverflow.com/questions/6217055/how-can-i-copy-a-file-from-a-remote-server-to-using-putty-in-windows
+
+  > Instead of PuTTy, I am using Windows 10's Ubuntu Bash shell, which maps the C drive as /mnt/c. The following command was run from my local bash terminal on a new terminal window.
+
+scp bkirsh@137.82.55.186:/home/bkirsh/assignment1/fastqc_output/SRR12506919_1_subset_fastqc.html /mnt/c/Users/bkirs/Documents
+
+## What can you say about the data quality? - 2 pt 
+# ---
+
+  > The "per base sequence quality" plot suggests that the quality is high across all nucleotides of every read, with little to no variability between samples. The small drop in quality towards the end of the reads is expected with Illumina sequencing. With this in mind, we can generalize that the median value (red line) and mean quality (blue line) are consistently elevated, with seemingly unnoticeable inter-quartile ranges (yellow boxes). The "per sequence quality scores" plot further confirms that almost all sequences have universally high quality, as there are no bumps at the lower quality values. All together, we can conclude that the average quality of the data is high. 
+
+```
+
+### b. Running a process on the background: screen
+
+The processes that we are about to run, can take a long time to finish. Thus, we will make use of the *screen* tool, which allows you to run a process in the background while continue using your server session without the risk of ending the process due to a bad internet connection, accidentally closing the tab or other random circumstances.
+
+```{bash, eval=FALSE}
+
+## To run a process in a background screen with screen you:
+
+# 1. Start a background process with a specific name 
+
+screen -S background_screen_bkirsh
+
+# 2. Run the process and any commands you wish
+
+wc -l /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq
+
+# 3. Get out of the background screen, you will need to type the following:
+
+ctrl + A + D 
+
+# 4. Return to the background screen to check the process
+
+screen -r background_screen_bkirsh
+
+# 5. Terminate the background screen once the process has ended
+# Within the background screen type:
+
+exit 
+
+```
+
+### c. Checking the server capacity and your current runs: htop
+
+Another way to check on the progress of your runs and the server status is with the *htop* command. This will open a screen showing all the processes that are being currently being run in the server. Our server only has 2 CPUs/cores, the green bar next to each code, represents how much of that node it is currently in use. Please be considerate when running jobs and do not monopolize the server that we all share.
+
+```{bash, eval=FALSE}
+
+## Use the htop command to describe the status of the server - 1.5 pt
+
+htop
+q
+
+```
+
+### d. Genome indexing - bowtie2
+
+Now, we will need to create an index of the human genome that bowtie2 will use to map our sequences in the genome. In order to do this, you will need to use the previously downloaded files of the human genome with the desired build (e.g. hg19,hg38), you can find those files within the server here: */usr/local/share/human/*
+
+Indexes take a lot of computational resources and time to run. The one we need for the human genome would take around 3 hours to be done. For this question, you can just enter the command here. You can run the command to see that Bowtie2 starts to build an index, and kill it with `ctrl+c` once you have confirmed it is working.
+
+```{bash, eval=FALSE}
+
+## Something useful to do when using a new software is to look at the documentation using the *help* option
+## Try running: 
+
+bowtie2 -h 
+
+## IMPORTANT!!!!
+## BEFORE RUNNING: go to the "Other resources" section at the end of the assignment!
+## __________________________________________________________________________________
+## Use the hg38 build to create an index of the human genome with bowtie2
+## Tip: look into the bowtie2-build help (bowtie2-build --help)  - 1.5 pt
+
+
+
+```
+
+### e. Alignment
+
+We are working with paired-end data. Thus, you will need to make sure to use both fastq files to align the sequences to the genome. **IMPORTANT:** Run with *default parameters* DO NOT specify any non-essential paramaters.
+
+**Time flag**: This step will take up to 30 mins
+
+```{bash, eval=FALSE}
+
+## Perform a paired-end alignment of the fastq sequences provided (located here: /usr/local/share/data/assignment_1/) to the human genome index build in the previous step - 2pt
+## Tip: look at the bowtie2 --help or the documentation on the tool website (http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml#getting-started-with-bowtie-2-lambda-phage-example)
+
+bowtie2 -x /usr/local/share/indexes/hg38_bowtie2_index -1 /usr/local/share/data/assignment_1/SRR12506919_1_subset.fastq -2 /usr/local/share/data/assignment_1/SRR12506919_2_subset.fastq -S bowtie2_output.sam
+
+
+```
+
+### f. Viewing the alignments
+
+Now, we will make use of **samtools** to review some basic features of the alignment. For more information about this tool: [*http://www.htslib.org/doc/*](http://www.htslib.org/doc/){.uri}
+
+```{bash, eval=FALSE}
+
+#### Using *samtools view* get: 
+
+## The total number of mapped reads - 0.5 pt
+# - 
+
+## Type the command that you used to get it below - 0.5 pt
+
+samtools view -c -F 4 bowtie2_output.sam
+
+  > The output is: 1223624
+
+## The total number of unmapped reads - 0.5 pt
+#- 
+## Type the command that you used to get it below - 0.5 pt
+
+samtools view -c -f 4 bowtie2_output.sam
+
+  > The output is: 111490.
+
+## Tip: check out the different flag (-f and -F) options
+## Tip: Read the samtools view --help, read carefully for an option that allows you to *count* the results of your search
+
+```
+
+## 5. Cleaning and Github Push
+
+Before signing up, we need to make sure that we won't leave behind any big files that can take up a lot of memory from our server. To do this, make sure to:
+
+a.  Delete any copies of the input assignment files you might have done on your personal folder
+
+b.  Zip or delete all the files used for the assignment
+
+Now that everything has been said and done, it's time to 'push' your final version of the assignment onto your github repository. Make sure to follow this basic steps:
+
+a.  Pull the repository onto your computer: this will ensure that you have the most up to date version (it is highly useful when working on collaborative projects!)
+
+b.  Commit the changes to the repository: all the changes on the assignment file that you have done up to this point will be saved in a version that you will be able to track
+
+c.  'Push' the changes to the repository: this will upload everything to your github repository.
+
+d.  Share the repository link on Canvas
+
+## Other Resources
+
+### a. Bowtie2 index
+
+Indexes take a lot of computational resources and time to run. The one we need for the human genome will take around 3 hours to be done. ***DO NOT RUN THE INDEX COMMAND***. Go on to the next step, using the previously run index: *hg38_bowtie2_index* under the following path: */usr/local/share/indexes/*
+
+### b. Rubric
+
+You can get up to 22.5 points, if you answer all the questions correctly. Make sure to consult the resources given through the assignment, they are meant to make the assignment easier.
+
+-   Github Setup - 2 pt
+
+-   Getting Familiar - 7.5 pt
+
+-   Managing Conda Environments - 3 pt
+
+-   Performing Alignments - 10 pt
