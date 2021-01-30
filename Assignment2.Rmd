@@ -91,17 +91,15 @@ fastqc /usr/local/share/data/assignment_2/input_iPSC_SRA66_subset_2.fastq.gz -o 
 ## Copy the html output file to your computer, open it and write below what can you tell about the data quality of these files.
 ## You can reference fastqc documentation if in doubt.
 
-# ANSWER: On a new window, I ran the following commands from my local machine.
+# ANSWER: On a new terminal window, I ran the following commands from my local machine:
 
-scp bkirsh@137.82.55.186:/home/bkirsh/assignment2/fastqc_output/read1/input_iPSC_SRA66_subset_1_fastqc.html /mnt/c/Users/bkirs/Documents
+#scp bkirsh@137.82.55.186:/home/bkirsh/assignment2/fastqc_output/read1/input_iPSC_SRA66_subset_1_fastqc.html /mnt/c/Users/bkirs/Documents
 
-scp bkirsh@137.82.55.186:/home/bkirsh/assignment2/fastqc_output/read2/input_iPSC_SRA66_subset_2_fastqc.html /mnt/c/Users/bkirs/Documents
+#scp bkirsh@137.82.55.186:/home/bkirsh/assignment2/fastqc_output/read2/input_iPSC_SRA66_subset_2_fastqc.html /mnt/c/Users/bkirs/Documents
 
-# ANSWER: The quality of both files is exceptionally high all throughout. The drop over the length of the read is expected, but minor. All together, the mean quality score at each base position is consistently elevated with minimal variability (blue line). While both reads have a generally high quality score, read 2 is noticeably lower quality than read 1, especialy towards the end.
+# Then, I opened the .html files on my web browser for inspection. The quality of both files is exceptionally high all throughout. The drop over the length of the read is expected, but minor. All together, the mean quality score at each base position is consistently elevated with minimal variability (blue line). While both reads have a generally high quality score, read 2 is noticeably lower quality than read 1, especialy towards the end.
   
 #?# Are there any differences between the files for read 1 and read 2? Describe what you see below: - 1.5 pt
-## -
-## -
 
 # ANSWER: In both files, the basic statistics such as total number of reads, reads flagged as poor quality, read length, and GC content are the same. However, the average quality scores for read 1 (~1600000) is higher than for read 2 (~1200000). This is expected with paired-end reads and is more clearly attested by the "per base sequence quality" and "per sequence quality scores" plots. In general, Illumina sequencing produces reads whose quality decreases towards the end, with read 2 being often worse quality than read 1. Thus, the lowest quality bases are at the end of read 2.
 
@@ -175,7 +173,7 @@ samtools view assignment2/bowtie2_output.sorted.bam | cut -f1,3,4 | head -5
 #?# What changed between the two files? Describe what is sambamba sort doing. - 1 pt
 ## If needed, you can inspect more of each bam file by increasing the -n parameter for `head` in the above (just don't bother to include more than 5 lines for each in your submission).
 
-# ANSWER: The first file is unsorted, while the second file is sorted by reference id and start coordinate. This can be further attested by running "samtools view -h <file.bam> | head," which outputs "@HD     VN:1.0  SO:unsorted" and "@HD     VN:1.0  SO:coordinate" for the first and second files, respectively. As such, sambamba sorts primarily by the RNAME field (i.e. reference id), whose order is determined by the order of @SQ lines in the header. For alignments with the same RNAME, reads are ordered by increasing start coordinate (i.e., POS field) and for alignments with the same RNAME and POS, order is arbitrary. The result of sambamba sorting is a file where alignments are grouped by both RNAME and POS.
+# ANSWER: The first file is unsorted, while the second file is sorted by reference id (i.e., chromosome) and start coordinate. This can be further attested by running "samtools view -h <file.bam> | head," which outputs "@HD     VN:1.0  SO:unsorted" and "@HD     VN:1.0  SO:coordinate" for the first and second files, respectively. As such, sambamba sorts primarily by the RNAME field (i.e. reference id), whose order is determined by the order of @SQ lines in the header. For alignments with the same RNAME, reads are ordered by the POS filed (i.e., increasing start coordinate), whereas for alignments with both the same RNAME and POS, reads are ordered arbitrarily. The result of sambamba sorting is a file where alignments are grouped and ordered by both RNAME and POS.
 
 
 ```
@@ -299,12 +297,13 @@ Note that in the script provided, fastqc is not actually run, so you will have t
 When you are done, enter the code for your pipeline in the space provided below - 10 pts
 
 ```{bash, eval=FALSE}
-## REPLACE THIS WITH YOUR SCRIPT
 #!/bin/bash
 #
 # AUTHOR: Bianca Kirsh <bkirsh.3006@gmail.com>
 # DATE: January 26, 2021
 # FILE: fastqToFilteredBam.sh
+#
+# SYNOPSIS: A pipeline created for Assignment 2 (BMEG 400E).
 #
 # DESCRIPTION: This script pre-processes paired-end raw sequence data provided in FASTQ format to produce
 # analysis-ready BAM files containing only uniquely mapped reads. This includes quality control using
@@ -323,18 +322,28 @@ When you are done, enter the code for your pipeline in the space provided below 
 #
 #       ./fastqToFilteredBam.sh <sampleID> <fastqFile1> <fastqFile2>
 #
-# Alternatively, it can be passed as a command-line argument to the program https://raw.githubusercontent.com/BMEGGenoInfo/Assignments/main/Assignment_2/runTheseJobsSerially.sh.
+#       Alternatively, it can be passed as a command-line argument to the program available
+# for download at https://raw.githubusercontent.com/BMEGGenoInfo/Assignments/main/Assignment_2/runTheseJobsSerially.sh.
 #
 #       ./runTheseJobsSerially.sh ./fastqToFilteredBam.sh <taskfile>
 #
-# In this case, the <taskfile> consists of a tab-delimited file with three columns: sampleID, fastqFile1,
-# and fastqFile2. A sample first line is illustrated below.
+#       In this case, the <taskfile> consists of a tab-delimited file with three columns:
+# sampleID, fastqFile1, and fastqFile2. A sample first line is illustrated below.
 #
-# iPSC_input  input_iPSC_SRA66_subset_1.fastq.gz  input_iPSC_SRA66_subset_2.fastq.gz
+#       iPSC_input  input_iPSC_SRA66_subset_1.fastq.gz  input_iPSC_SRA66_subset_2.fastq.gz
+#
+# OUTPUTS: This script creates two new directories within your current working directory: "MyLogDirectory" and
+# "MyOutputDirectory." While the first holds a set of empty files that represent the internal state of the pipeline,
+# the latter contains the actual output of each step. It consists of a two-level directory whose master file directory
+# is indexed by the sampleID. The user file directories include the following files:
+#       - <fastqFile1>.html, <fastqFile2>.htm, <fastqFile1>.zip, and <fastqFile2>.zip: Outputs of the FastQC step
+#       - <sampleID>.sam: Output of the Bowtie 2 alignment step
+#       - <sampleID>.bam: Output of the Samtools conversion step
+#       - <sampleID>.sorted.bam and <sampleID>.sorted.bai: Outputs of the Sambamba sorting step
+#       - <sampleID>.filtered.bam and <sampleID>.filtered.bai: Outputs of the Sambamba filtering step
 #
 # SPECIAL NOTES: For the purposes of this assignment, the workflow is designed to operate using pre-downloaded
 # fastq files (/usr/local/share/data/assignment_2) and a pre-indexed human genome (/usr/local/share/indexes/hg38_bowtie2_index).
-#
 
 set -Eeuo pipefail # Abort the script on errors and unbound variables.
 
