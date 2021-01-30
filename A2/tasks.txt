@@ -1,0 +1,2 @@
+iPSC_input      input_iPSC_SRA66_subset_1.fastq.gz      input_iPSC_SRA66_subset_2.fastq.gz
+H3K27me3_input  H3K27me3_iPSC_SRA60_subset_1.fastq.gz   H3K27me3_iPSC_SRA60_subset_2.fastq.gz
