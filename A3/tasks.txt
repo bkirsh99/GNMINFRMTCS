@@ -1,0 +1,5 @@
+/home/bkirsh/assignment3        bowtie2_output.sam      25
+/usr/local/share/data/assignment_3      H3K27me3_iPSC_SRA60_subset_1_LEN_50_mapped.bam  50
+/usr/local/share/data/assignment_3     H3K27me3_iPSC_SRA60_subset_1_LEN_75_mapped.bam  75
+/usr/local/share/data/assignment_3     H3K27me3_iPSC_SRA60_subset_1_LEN_100_mapped.bam  100
+/usr/local/share/data/assignment_3     H3K27me3_iPSC_SRA60_subset_1_LEN_150_mapped.bam  150
