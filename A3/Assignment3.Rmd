@@ -241,7 +241,11 @@ ggplot(sequence_run.df, aes(x=run_type, y=uniquely_mapped_reads)) + geom_bar(sta
 
 #?# Does the run type makes a difference? If there is, is it large? - 1 pt
 
-# ANSWER: Yes, the run type makes a difference. In fact, the number of uniquely mapped reads for the paired-end file is nearly twice as large as the number of uniquelt mapped reads for the single-end file. This is because each mate is aligned separately, and the information on both pairs is combined and reported in the same alignment line.Sambamba reports each mate in a pair separately. Arguably, a better comparison metric would surface from applying the filters "[XS] == null and not unmapped and not duplicate and first_of_pair", "[XS] == null and not unmapped and not duplicate and second_of_pair", or "[XS] == null and not unmapped and not duplicate and not mate_is_unmapped" to the paired-end file. This would amount to 1346202, 1340033, and 2672845 respectively. The latter can be divided by two (1336422.5) to compose Sambamba outputs which are more suitable to compare against the single-end value of 1325510.
+# ANSWER: Yes, the run type makes a difference. In fact, the number of uniquely mapped reads for the paired-end file is nearly twice as large as the number of uniquelt mapped reads for the single-end file. This is because the alignment of a paired-end read produces a distinct output for each mate. Thus, Sambamba counts the uniquely mapped reads of mate pairs separately. Arguably, a better comparison metric would result from applying one of the following filters to the paired-end file:
+# "[XS] == null and not unmapped and not duplicate and first_of_pair," which outputs 1346202
+# "[XS] == null and not unmapped and not duplicate and second_of_pair," which outputs 1340033
+# "[XS] == null and not unmapped and not duplicate and not mate_is_unmapped," which outputs 2672845 and approximates to 1336422.5 per mate (2672845/2)
+# Any of the outputs above are more suitable to compare "read-for-read" against the single-end value of 1325510.
 
 #?# In your own words explain the difference between SE and PE read alignment. - 1 pt
 
