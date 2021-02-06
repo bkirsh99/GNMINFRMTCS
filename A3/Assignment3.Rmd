@@ -58,8 +58,7 @@ bowtie2 -x /usr/local/share/indexes/hg38_bowtie2_index -U H3K27me3_iPSC_SRA60_su
 ## -F "[XS] == null and not unmapped and not duplicate"
 ## Tip: Check for the sambamba documentation for options that will allow you to use the sam file as an input and automatically count the number of reads.
 
-sambamba view -F "[XS] == null and not unmapped and not duplicate" -q -
-S -c bowtie2_output.sam
+sambamba view -F "[XS] == null and not unmapped and not duplicate" -q -S -c bowtie2_output.sam
 
 # ANSWER: In the previous question, the output of the Bowtie 2 command informed us that "1325510 (70.07%) aligned exactly 1 time reads/pairs (no limit)." Similarly, the output of the Sambamba command with the "-c" flag confirmed that the number of uniquely mapped reads is 1325510. Note that the "-q" flag was also applied to quietly display the results without additional information about the tool.
 
