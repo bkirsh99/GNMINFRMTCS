@@ -271,6 +271,8 @@ head -n 3 merged_hg38.bed
 #SRR12506919.100 chr19 3556952 3557103 + chr19 3556952 3557103 +
 
 ## Copy the merged bed file to your local computer for analysis
+
+# ANSWER: From my local bash terminal on a new terminal window, I ran the command below.
 scp bkirsh@137.82.55.186:/home/bkirsh/assignment4/merged_hg38.bed /mnt/c/Users/bkirs/Documents
 ```
 
@@ -279,6 +281,15 @@ your local computer to work on your personal RStudio!
 
 ``` r
 #?# Go through the function line by line using your merged bed file and your chosen parameters, as if it weren't a function (e.g. set "merged_bed" to the data.frame containing your data, and run each line of the function (you will also need to set the parameters)). Explain in a concise way (using comments) how each line is changing the data. Use functions like head and tail to visualize the data as it's changing. - 4 pt
+
+# ANSWER: In order to go through the function line by line, we must first declare its parameters as global variables and load any required packages. Then, we can run each line of the reads.per.chr() separately to understand how they are changing the data. An explanation is provided as a comment at the end of each line.
+
+merged_bed <- read.csv("C:/Users/bkirs/Documents/merged_hg38.bed",header = FALSE, sep="",stringsAsFactors=FALSE, quote="")
+cols2compare=c(2,6)
+type.a="hg38" # The reads.per.chr() function requires type.a and type.b to be string variables rather than vectors. Alternatively, we could change the arguments for paste0() to type.a[i] and type.b[i] and utilize vector variables instead.
+type.b="hg19"
+#install.packages("reshape2")
+library("reshape2")
 
 ## reads.per.chr:
 # This function takes a merged bed file of two conditions A and B and gives a data.frame of 3 columns: Chr, variable (condition), value (how many reads per chromosome are when using that condition)
@@ -291,28 +302,23 @@ your local computer to work on your personal RStudio!
 
 reads.per.chr <- function(merged_bed, cols2compare=c(2,6), type.a=c("hg38", "redo"), type.b=c("hg19", "noDet")){
   
-  canonical_chromosomes <- paste0("chr", 1:22) #this line creates a character vector comprised of UCSC-style chromosome names (i.e. "chrN")
-  # it contains chromosomes 1 through 22, but excludes chrX, chrY, chrM, and unplaced or unlocalized sequences. 
+  canonical_chromosomes <- paste0("chr", 1:22) # This line creates a character vector comprised of UCSC-style chromosome names (i.e. "chrN"). It contains chromosomes 1 through 22, but excludes chrX, chrY, chrM, and unplaced or unlocalized sequences. 
   
-  chr_subset <- merged_bed[,c(cols2compare[1])] #this line creates a character vector comprised of the chromosome column of each read for the hg38 condition (i.e. column 2), including non-canonical chromosomes
-  # note: this type of data structure allows duplicate elements
-  table_chrs1 <- table(chr_subset) #this line creates a contingency table that reports the frequency of each variable for the specified condition, in this case the hg38 chromosome column (i.e. column 2)
+  chr_subset <- merged_bed[,c(cols2compare[1])] # This line creates a character vector comprised of the data contained in the chromosome column of all hg38 reads (i.e. column 2), including both canonical and non-canonical chromosomes. Note that this type of data structure allows (and includes) duplicate elements.
+  table_chrs1 <- table(chr_subset) # This line creates a contingency table from the "chr_subset" vector. It reports the frequency of each variable for the specified condition, in this case the hg38 chromosome column (i.e. column 2)
 
-  chr_subset <- merged_bed[,c(cols2compare[2])] #this line creates a character vector comprised of the chromosome column of each read for the hg19 condition (i.e. column 6), including non-canonical chromosomes
-  table_chrs2 <- table(chr_subset) #this line creates a contingency table that reports the frequency of each variable for the specified condition, in this case the hg19 chromosome column (i.e. column 6)
+  chr_subset <- merged_bed[,c(cols2compare[2])] # This line modifies the "chr_subset" character vector that was created above. This time, the entries correspond to the data contained in the chromosome column of all hg19 reads (i.e. column 6), including both canonical and non-canonical chromosomes, as well as repeated values.
+  table_chrs2 <- table(chr_subset) # This line creates a second contingency table from the new "chr_subset" vector. It reports the frequency of each variable for the specified condition, in this case the hg19 chromosome column (i.e. column 2)
   
   compare.df <- data.frame(column1=table_chrs1[names(table_chrs1) %in% canonical_chromosomes],
-                           column2=table_chrs2[names(table_chrs2) %in% canonical_chromosomes]) #this line creates a data frame to compare the frequency of each variable between the two conditions
-  # it contains four columns: variable_condition1, frequency_condition1, variable_condition2, and frequency_condition2 - in this case the variable corresponds to the chromosome name and the conditions are hg19 versus hg38
-  # it only includes the chromosomes defined by "canonical_chromosomes"
+                           column2=table_chrs2[names(table_chrs2) %in% canonical_chromosomes]) # This line creates a data frame that is used to compare the frequency of each variable in the two conditions. It contains four columns: variable_condition1, frequency_condition1, variable_condition2, and frequency_condition2. In this case, the variable corresponds to the chromosome name and the conditions are hg19 and hg38. Note that the %in% operator is used to subset the data such that it includes only the chromosomes defined by "canonical_chromosomes"
   
-  compare.df <- compare.df[,c(1,2,4)] #this line removes the "variable_condition2" column (i.e. column 3), since it is redundant with the "variable_condition1" column (i.e. column 1), but preserves the frequency columns for pairwise comparison between conditions
-  colnames(compare.df) <- c("Chr",paste0(type.a, "_reads"), paste0(type.b, "_reads")) #this lines renames the columns in the "compare.df" data frame to give it a more meaningful name that represents the conditions
+  compare.df <- compare.df[,c(1,2,4)] # This line modifies the "compare.df" data frame by removing the "variable_condition2" column (i.e. column 3), since it is redundant with the "variable_condition1" column (i.e. column 1). Note that it still preserves the two frequency columns to compare both conditions against the same variable.
+  colnames(compare.df) <- c("Chr",paste0(type.a, "_reads"), paste0(type.b, "_reads")) # This lines modifies the "compare.df" data frame by renaming its columns to more meaningful labels that better elucidate the variable and the conditions.
   
-  compare.df <- melt(compare.df) #this line stacks the frequency columns of each condition in "compare.df" into a single column of data, such that each row is a unique id-variable combination.
-  # it converts wide-format data into long-format data, where individual rows of data are identified by the id variable "Chr"
+  compare.df <- melt(compare.df) # This line modifies the "compare.df" data frame by melting it. The melt() function converts wide-format data into long-format data, where individual rows of data are identified by the id variable. In this case, the id variable (which is unchanged) corresponds to the "Chr" column, while the measured variables (which are stacked into a single column of data) correspond to the condition (i.e. variable) and frequency (i.e. value). This way, each row is a unique id-variable combination.
 
-    return(compare.df) #this line returns the final melted data frame
+    return(compare.df) # This line returns the final melted data frame.
   
 }
 ```
@@ -322,6 +328,8 @@ reads.per.chr <- function(merged_bed, cols2compare=c(2,6), type.a=c("hg38", "red
 
 # ANSWER: From my local bash terminal on a new terminal window, I ran the command below.
 #scp bkirsh@137.82.55.186:/home/bkirsh/assignment4/merged_hg38.bed /mnt/c/Users/bkirs/Documents
+# NOTE: I commented out the bash code above because it is contained within an R code chunk, which causes an error when knitting the file.
+
 
 #?# Load your merged bed file into R suing the *read.csv* function and save it into a data.frame
 #?# Type the command you used below  - 1pt
@@ -342,6 +350,8 @@ library(reshape2)
 
 #?# Run the reads.per.chr on your genome builds merged bed (previously loaded), specify all the parameters following the instructions of the function, type the command used below: - 1.5 pt 
 
+# NOTE: Note that type.a and type.b must be string variables, otherwise the reads.per.chr() function encounters an error (Error in names(x) <- value : 'names' attribute [4] must be the same length as the vector [3])
+
 output.df <- reads.per.chr(merged_bed.df,cols2compare=c(2,6),type.a="hg38",type.b="hg19")
 ```
 
@@ -349,6 +359,8 @@ output.df <- reads.per.chr(merged_bed.df,cols2compare=c(2,6),type.a="hg38",type.
 
 ``` r
 #?# How many reads were mapped to two different chromosomes? What percent of reads is this? Type the code and the answers for each below. 2 pt
+
+# ANSWER: To answer this problem, the same workflow was used for all three cases (i.e. the liftOver file in this question, the redo file in question 2a, and the nonDet file in question 2c). In summary, the input merged bed is first filtered to remove non-canonical chromosomes. Then, I investigate if the entries in the chromosome column of conditions A and B are the same for each read. Finally, I use a table to quantify these results. The scatterplot is created by further filtering the resulting data frame to remove the reads that were mapped to two different chromosomes. Below is the workflow for the liftOver file.   
 
 library(dplyr)
 ```
@@ -365,14 +377,14 @@ library(dplyr)
     ##     intersect, setdiff, setequal, union
 
 ``` r
-canonical_chromosomes <- paste0("chr", 1:22)
+canonical_chromosomes <- paste0("chr", 1:22) # Create a vector to hold the canonical chromosomes. Note that the "canonical_chromosomes" vector previously created by the reads.per.chr() function is a local variable, and only exists within that function.
 canonical_merged_bed.df <- merged_bed.df %>% filter(chr_hg38 %in% canonical_chromosomes & chr_hg19 %in% canonical_chromosomes) # Filter the original merged data frame to contain only the chromosomes defined in "canonical_chromosomes"
-differences.df <- mutate(canonical_merged_bed.df,chr_diff=ifelse(chr_hg19==chr_hg38,0,1)) # Create a data frame with all the original columns, plus a new column to represent mapping to the same chromosome (0) or to two different chromosomes (1)
+differences.df <- mutate(canonical_merged_bed.df,chr_diff=ifelse(chr_hg19==chr_hg38,0,1)) # Create a new data frame from the filtered merged data frame with an additional column to represent mapping to the same chromosome (0) or to two different chromosomes (1)
 
 table_diff <- table(differences.df$chr_diff) # Create a table to tabulate results and quantify the differences in mapping
 
-View(table_diff)
-prop.table(table_diff)
+View(table_diff) # View the table in absolute values.
+prop.table(table_diff) # View the table in percentages.
 ```
 
     ## 
@@ -380,7 +392,7 @@ prop.table(table_diff)
     ## 0.98419176 0.01580824
 
 ``` r
-# ANSWER: We can inspect the table by calling "View(table_diff)" to find out that there were 8847 reads that mapped to two different chromosomes. Using "prop.table(table_diff)," we learn that this corresponds to 1.58% of reads.
+# ANSWER: We can inspect the table by calling "View(table_diff)" to find out that there were 8847 reads that mapped to two different chromosomes (1). Using "prop.table(table_diff)," we learn that this corresponds to 1.58% of reads.
 
 ## Using the output data.frame you got from running the reads.per.chr function on your merged bed, create a barplot that: 
 ## Uses the Chr column for the x-axis
@@ -399,8 +411,9 @@ p + theme(legend.position="bottom", axis.text.x = element_text(angle = 90, vjust
 Which chromosome has the biggest difference between reads? Which genome
 build had more reads for this chromosome? Answer below - 1 pt
 
-ANSWER: Chromosome 21 has the biggest difference between reads. The hg38
-build has more reads than the hg19 build for this chromosome.
+ANSWER: By visual inspection, chromosome 21 has the biggest difference
+between reads. The hg38 build has noticeably more reads than the hg19
+build for this chromosome.
 
 ### d. Reads position in the genome builds
 
@@ -413,8 +426,8 @@ build has more reads than the hg19 build for this chromosome.
 #?# Type the command you used below: - 3 pt
 
 library(ggplot2)
-same_chr.df <- differences.df %>% filter((chr_diff == 0)) # Filter data frame to contain only the cases where both reads are mapped to the same chromosome
-ggplot(same_chr.df, aes(x=start_hg38, y=start_hg19)) + geom_point() + facet_wrap(~chr_hg38) # The facet wrap could have been done using either "chr_hg38" or "chr_hg19" because only cases where the reads mapped to the same chromosome are being considered
+same_chr.df <- differences.df %>% filter((chr_diff == 0)) # Filter the "differences.df" data frame to contain only the cases where both reads are mapped to the same chromosome (0).
+ggplot(same_chr.df, aes(x=start_hg38, y=start_hg19)) + geom_point() + facet_wrap(~chr_hg38) # Note that the facet wrap could have been done using either "chr_hg38" or "chr_hg19" because only the cases where the reads mapped to the same chromosome are being considered.
 ```
 
 ![](Assignment4_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
@@ -495,7 +508,7 @@ colnames(merged_redo_bed.df) <- c('read_id','chr_ori','start_ori','end_ori','str
 #?# Run the reads.per.chr on your genome builds merged bed (previously loaded), specify all the parameters following the instructions of the function, type the command used below: - 1.5 pt 
 
 library(reshape2)
-output_redo.df <- reads.per.chr(merged_redo_bed.df,cols2compare=c(2,6),type.a="hg38",type.b="hg19")
+output_redo.df <- reads.per.chr(merged_redo_bed.df,cols2compare=c(2,6),type.a="hg38",type.b="redo")
 ```
 
     ## Using Chr as id variables
@@ -505,7 +518,7 @@ output_redo.df <- reads.per.chr(merged_redo_bed.df,cols2compare=c(2,6),type.a="h
 
 library(dplyr)
 canonical_merged_redo_bed.df <- merged_redo_bed.df %>% filter(chr_ori %in% canonical_chromosomes & chr_redo %in% canonical_chromosomes) # Filter the original merged data frame to contain only the chromosomes defined in "canonical_chromosomes"
-differences_redo.df <- mutate(canonical_merged_redo_bed.df,chr_diff=ifelse(chr_ori==chr_redo,0,1)) # Create a data frame with all the original columns, plus a new column to represent mapping to the same chromosome (0) or to two different chromosomes (1)
+differences_redo.df <- mutate(canonical_merged_redo_bed.df,chr_diff=ifelse(chr_ori==chr_redo,0,1)) # Create a new data frame from the filtered merged data frame with an additional column to represent mapping to the same chromosome (0) or to two different chromosomes (1)
 
 table_redo_diff <- table(differences_redo.df$chr_diff) # Create a table to tabulate results and quantify the differences in mapping
 
@@ -550,8 +563,8 @@ the genome.
 #?# Type the command used below: - 0.5 pt
 
 library(dplyr)
-same_redo_chr.df <- differences_redo.df %>% filter((chr_diff == 0)) # Filter data frame to contain only the cases where both reads are mapped to the same chromosome
-start_differences.df <- mutate(same_redo_chr.df,start_diff = (start_ori - start_redo))
+same_redo_chr.df <- differences_redo.df %>% filter((chr_diff == 0)) # Filter the "differences.df" data frame to contain only the cases where both reads are mapped to the same chromosome (0). Note that this step is optional/unnecessary in this case, since all reads are mapped to the same chromosome.
+start_differences.df <- mutate(same_redo_chr.df,start_diff = (start_ori - start_redo)) # Create a new data frame from the filtered differences data frame with an additional column to hold the difference in start positions of the original and redo reads
 
 ## Use the *table* command to tabulate the results from the previous question. Ex. table(a-b)
 #?# Type the command you used below: - 0.5 pt
@@ -575,7 +588,7 @@ prop.table(table_redo_start_diff)
 ## x-axis: original run
 ## y-axis: re-run
 
-# ANSWER: We can expect to see a scatterplot that conists of a diagonal line with a positive slope. All the plotted data points will lie on that line, meaning that every point in the x-axis (i.e. original start coordinate) is an exact correspondance to every point in the y-axis (i.e. redo start coordinate).
+# ANSWER: We can expect to see a scatterplot with a strong, positive, linear association between start positions. It should consist of a diagonal line with a positive slope and without any outliers, such that all the plotted data points lie on the same line x = y. This would mean that every point in the x-axis (i.e. original start coordinate) has an exact and identical correspondence to every point in the y-axis (i.e. redo start coordinate).
 ```
 
 ### c. Non-deterministic seeds
@@ -640,11 +653,14 @@ merged_nondet_bed.df <- read.csv("C:/Users/bkirs/Documents/merged_hg38_nondet.be
 
 colnames(merged_nondet_bed.df) <- c('read_id','chr_ori','start_ori','end_ori','strand_ori','chr_nonDet','start_nonDet','end_nonDet','strand_nonDet')
 
+# NOTE: Not required for this question, but we could run the reads.per.chr() function as follows:
+#output_nonDet.df <- reads.per.chr(merged_nondet_bed.df,cols2compare=c(2,6),type.a="hg38",type.b="nonDet")
+
 #?# How many reads were mapped to two different chromosomes? What percent of reads is this? Type the code and the answers for each below. 2 pt
 
 library(dplyr)
 canonical_merged_nondet_bed.df <- merged_nondet_bed.df %>% filter(chr_ori %in% canonical_chromosomes & chr_nonDet %in% canonical_chromosomes) # Filter the original merged data frame to contain only the chromosomes defined in "canonical_chromosomes"
-differences_nondet.df <- mutate(canonical_merged_nondet_bed.df,chr_diff=ifelse(chr_ori==chr_nonDet,0,1)) # Create a data frame with all the original columns, plus a new column to represent mapping to the same chromosome (0) or to two different chromosomes (1)
+differences_nondet.df <- mutate(canonical_merged_nondet_bed.df,chr_diff=ifelse(chr_ori==chr_nonDet,0,1)) # # Create a new data frame from the filtered merged data frame with an additional column to represent mapping to the same chromosome (0) or to two different chromosomes (1)
 
 table_nondet_diff <- table(differences_nondet.df$chr_diff) # Create a table to tabulate results and quantify the differences in mapping
 
@@ -657,7 +673,7 @@ prop.table(table_nondet_diff)
     ## 0.990222194 0.009777806
 
 ``` r
-# ANSWER: We can inspect the table by calling "View(table_nondet_diff)" to find out that there were 5517 reads that mapped to two different chromosomes. Using "prop.table(table_nondet_diff)," we learn that this corresponds to 0.98% of reads.
+# ANSWER: We can inspect the table by calling "View(table_nondet_diff)" to find out that there were 5517 reads that mapped to two different chromosomes (1). Using "prop.table(table_nondet_diff)," we learn that this corresponds to 0.98% of reads.
 
 ## Using the start position of the reads on both alignment runs do a scatterplot in ggplot that: 
 ## Has the start in the hg38 genome build in the x-axis
@@ -667,8 +683,8 @@ prop.table(table_nondet_diff)
 #?# Type the command you used below: - 2 pt
 
 library(ggplot2)
-same_nondet_chr.df <- differences_nondet.df %>% filter((chr_diff == 0)) # Filter data frame to contain only the cases where both reads are mapped to the same chromosome
-ggplot(same_nondet_chr.df, aes(x=start_ori, y=start_nonDet)) + geom_point() + facet_wrap(~chr_ori) # The facet wrap could have been done using either "chr_ori" or "chr_nonDet" because only cases where the reads mapped to the same chromosome are being considered
+same_nondet_chr.df <- differences_nondet.df %>% filter((chr_diff == 0)) # Filter "differences_nondet.df" data frame to contain only the cases where both reads are mapped to the same chromosome
+ggplot(same_nondet_chr.df, aes(x=start_ori, y=start_nonDet)) + geom_point() + facet_wrap(~chr_ori) # Note that the facet wrap could have been done using either "chr_ori" or "chr_nonDet" because only cases where the reads mapped to the same chromosome are being considered
 ```
 
 ![](Assignment4_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
@@ -677,11 +693,11 @@ ggplot(same_nondet_chr.df, aes(x=start_ori, y=start_nonDet)) + geom_point() + fa
 #?# Explain why this changes when you add the --non-deterministic --seed 3 flags. What is are these flags doing? Why did you get the result you saw in 2b?- 2 pt
 ## Tip: Look at the bowtie2 documentation!
 
-# ANSWER: In Bowtie 2, when a set of equally-good alignment choices are found, a pseudo-random number is used to decide which to report. The "--non-deterministic" option changes the way that this pseudo-random generator works.  Normally, Bowtie 2 will report the same alignment for identical reads (same read name, nucleotide string, and quality string), even if there are many different equally good alignments. This was true for 2b, where no flags were used and the same alignment was reported for identical reads, even if there was ambiguity. However, by adding the "--non-deterministic --seed 3" flags, Bowtie 2 did not necessarily report the same alignment for identical reads. As a result, we learn that, as opposed to 2b, there were reads mapped to two different chromosomes in this case.
+# ANSWER: In Bowtie 2, when a set of equally-good alignment choices are found, a pseudo-random number is used to decide which to report. The "--non-deterministic" option changes the way that this pseudo-random generator works.  Normally, Bowtie 2 will report the same alignment for identical reads (same read name, nucleotide string, and quality string), even if there are many different equally good alignments. This was true for 2b, where no flags were used and the same alignment was reported for identical reads, even if there was ambiguity. However, by adding the "--non-deterministic --seed 3" flags in this question, Bowtie 2 did not necessarily report the same alignment for identical reads. As a result, we notice that, as opposed to 2b, the same read can be mapped to two different chromosomes in this case.
 
-#?# How do the number of off-diagonal reads and reads mapping to different chromosomes compare between where we mapped to two different genome versions (and then lifted over), versus the use of non-deterministic alignment? What fraction of reads that you found aligned to different chromsomes when using hg19 vs hg38 result from the differences between these two versions? - 3 pts
+#?# How do the number of off-diagonal reads and reads mapping to different chromosomes compare between where we mapped to two different genome versions (and then lifted over), versus the use of non-deterministic alignment? What fraction of reads that you found aligned to different chromosomes when using hg19 vs hg38 result from the differences between these two versions? - 3 pts
 
-# ANSWER: Both the lifted over and the non-deterministic alignments had off-diagonal reads and reads mapping to different chromosomes. While there were more off-diagonal data points in the non-deterministic data set, the numeric value of reads that mapped to two different chromosomes was larger for the lifted over data set. From the non-deterministic alignment, we learned that 5517 mapped differently due to the arbitrary choice between equally-good alignments. Thus, there were 3330 reads (8847 - 5517), or 0.58% (3330 / 574865), that aligned to two different chromosomes because of actual differences between the hg19 and the hg38 genome builds.
+# ANSWER: Both the lifted over and the non-deterministic alignments had off-diagonal reads and reads mapping to different chromosomes. While there were more off-diagonal data points in the non-deterministic data set, the numeric value of reads that mapped to two different chromosomes was larger for the lifted over data set. From the non-deterministic alignment, we learned that 5517 mapped differently due to the arbitrary choice between equally-good alignments. Thus, there were 3330 reads (8847 - 5517), or 37.64% (3330 / 8847), that aligned to two different chromosomes because of actual differences between the hg19 and the hg38 genome builds rather than alignment choice.
 ```
 
 Please knit your Rmd file to github\_document and include both in your
