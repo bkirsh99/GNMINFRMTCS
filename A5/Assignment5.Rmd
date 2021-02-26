@@ -102,7 +102,7 @@ scp bkirsh@137.82.55.186:/usr/local/share/data/assignment_5/hg38.blacklist.bed /
 
 **Add screenshot of your IGV session here:**
 
-![Visualization of signals using IGV (chr3:93,470,124-93,471,058).](/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5/igv_screenshot1.png)
+![Visualization of signals using IGV (chr3:93,470,124-93,471,058).](/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5/igv_screenshot1.PNG)
 
 ## 2. Narrow vs Broad peaks
 
