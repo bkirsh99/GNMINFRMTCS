@@ -186,7 +186,7 @@ plotHeatmap -m matrix_norm.gz -o matrix_norm.png --hclust 3 --colorMap Blues
 #?# Explain what you are looking at (Axes, colours, curves). Where are the marks located? What are the differences between the clusters? - 3 pts
 
 #ANSWER: First, we must copy the heatmap .png file to our local computer to visualize the file.
-scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm.png /mnt/c/Users/bkirs/Documents
+scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm.png /mnt/c/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5
 
 #ANSWER: Using hierarchical clustering, the set of reference genes contained in the reference_genes.bed file is split into three groups based on their similarities in enrichment pattern for each of the signal files (i.e., H3K27me3, H3K4me3, and H3K27ac). The top profile plots depict the read density for each mark across the transcription start sites of all reference genes. In other words, they display the ChIP signal profile across +/- 1000 bp windows around the TSS and TES of genes for each histone modification. In these plots, the gene clusters are represented by different coloured lines (i.e., dark blue, light blue, and yellow), while the gene region and the read desnity values in the bigWig files (i.e., ChIP-seq signal intensity) correspond to the x- and y-axis, respectively. Below, the heatmaps communicate the same information, whereby the variation in colour hue reflects the magnitude of enrichment or depletion for the different marks. In this case, the darker the blue, the stronger the signal for the histone mark indicated above. Once again, the gene region is represented by the x-axis and a reference colour scale can be used to estimate signal intensity from heatmap colour values.
 ```
@@ -195,7 +195,7 @@ scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm.png /mnt/c/Users/b
 
 ![Heatmap of the distribution of input-normalized epigenetic marks
 (H3K27me3, H3K4me3, and H3K27ac) relative to a set of reference
-genes.](/Users/bkirs/Documents/matrix_norm.png)
+genes.](/static/a5/matrix_norm.png)
 
 ``` bash
 ## Now the above heatmap was made with the ratio of ChIP to input. Repeat the process above, but this time using the raw bigwig files (not input-normalized). 
@@ -205,7 +205,7 @@ computeMatrix scale-regions -S H3K27me3_chr3_coverage.bw H3K4me3_chr3_coverage.b
 
 plotHeatmap -m matrix_raw.gz -o matrix_raw.png --hclust 3 --colorMap Blues
 
-scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_raw.png /mnt/c/Users/bkirs/Documents
+scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_raw.png /mnt/c/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5
 
 #?# Include a screenshot of this analysis, below this code block. - 1 pt
 #?# How does this compare to the input-normalized data? Why do you think this is? - 1 pt
@@ -217,7 +217,7 @@ scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_raw.png /mnt/c/Users/bk
 
 ![Heatmap of the distribution of raw epigenetic marks (H3K27me3,
 H3K4me3, and H3K27ac) relative to a set of reference
-genes.](/Users/bkirs/Documents/matrix_raw.png)
+genes.](/static/a5/matrix_raw.png)
 
 ## 3. Peak calling
 
@@ -293,7 +293,7 @@ are the peaks are identified.
 \*\*\* SCREENSHOT OF IGV\*\*\*
 
 ![Visualization of H3K4me3 signals using IGV
-(chr3:44,608,952-44,670,849).](/Users/bkirs/Documents/School/BMEG400E/Assignments/igv_screenshot2.png)
+(chr3:44,608,952-44,670,849).](/static/a5/igv_screenshot2.PNG)
 
 ## c. Peak enrichments
 
@@ -323,28 +323,28 @@ plotHeatmap -m matrix_norm_H3K27ac.gz --hclust 3 -o matrix_norm_clust_H3K27ac.pn
 
 #?# Add screenshots of the 3 heatmaps you got using the epigenetic marks' peak files as reference files. Add them after this code chunk in the following order: H3K4me3, H3K27ac, H3K27me3 - 1.5 pt
 
-scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm_clust_H3K27me3.png /mnt/c/Users/bkirs/Documents
-scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm_clust_H3K4me3.png /mnt/c/Users/bkirs/Documents
-scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm_clust_H3K27ac.png /mnt/c/Users/bkirs/Documents
+scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm_clust_H3K27me3.png /mnt/c/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5
+scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm_clust_H3K4me3.png /mnt/c/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5
+scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm_clust_H3K27ac.png /mnt/c/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5
 ```
 
 ***H3K4me3 screenshot***
 
 ![Heatmap of the distribution of input-normalized epigenetic marks
 (H3K27me3, H3K4me3, and H3K27ac) relative to the peak file for
-H3K4me3.](/Users/bkirs/Documents/matrix_norm_clust_H3K4me3.png)
+H3K4me3.](/static/a5/matrix_norm_clust_H3K4me3.png)
 
 ***H3K27ac screenshot***
 
 ![Heatmap of the distribution of input-normalized epigenetic marks
 (H3K27me3, H3K4me3, and H3K27ac) relative to the peak file for
-H3K27ac.](/Users/bkirs/Documents/matrix_norm_clust_H3K27ac.png)
+H3K27ac.](/static/a5/matrix_norm_clust_H3K27ac.png)
 
 ***H3K27me3 screenshot***
 
 ![Heatmap of the distribution of input-normalized epigenetic marks
 (H3K27me3, H3K4me3, and H3K27ac) relative to the peak file for
-H3K27me3.](/Users/bkirs/Documents/matrix_norm_clust_H3K27me3.png)
+H3K27me3.](/static/a5/matrix_norm_clust_H3K27me3.png)
 
     #?# Do you see an overlap between the peaks of different epigenetic marks? Which epigenetic marks? - 1 pt
 
