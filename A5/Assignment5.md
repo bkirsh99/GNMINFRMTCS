@@ -140,7 +140,7 @@ scp bkirsh@137.82.55.186:/usr/local/share/data/assignment_5/hg38.blacklist.bed /
 **Add screenshot of your IGV session here:**
 
 ![Visualization of signals using IGV
-(chr3:93,470,124-93,471,058).](/Users/bkirs/Documents/School/BMEG400E/Assignments/igv_screenshot1.png)
+(chr3:93,470,124-93,471,058).](/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5/igv_screenshot1.png)
 
 ## 2. Narrow vs Broad peaks
 
@@ -210,7 +210,7 @@ scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_raw.png /mnt/c/Users/bk
 #?# Include a screenshot of this analysis, below this code block. - 1 pt
 #?# How does this compare to the input-normalized data? Why do you think this is? - 1 pt
 
-#ANSWER: The range of the scale for the heatmaps generated with the raw ChIP-seq data is noticably larger, and the signal intensities appear to be much more binary (i.e., "all-or-nothing"). Furthermore, the size of the clusters is different, with cluister 1 being much smaller and cluster 3 being much larger in the raw heat maps. This is because the first set of heatmaps was created by normalizing the data based on the ratio of ChIP to input values, therefore compensating for differences in sequencing depth and mapping efficiency. In this sense, the input DNA acts as a control sample that is used to define true peaks (i.e., enrichment) as the regions of the genome with statistically significant higher number of reads than the control/background. Since histone modifications have different shapes, levels of enrichment, and coverage of the genomic region where they are located, normalization against a background must be applied to preserves the shape of each variable’s distribution while making them easily comparable on the same scale.
+#ANSWER: The range of the scale for the heatmaps generated with the raw ChIP-seq data is noticably larger, and the signal intensities appear to be much more binary (i.e., "all-or-nothing", white vs. dark-blue). Furthermore, the size of the clusters is different, with cluister_1 being much smaller and cluster_3 being much larger in the raw heat maps. This is because the first set of heatmaps was created by normalizing the data based on the ratio of ChIP to input values, therefore compensating for differences in sequencing depth and mapping efficiency. In this sense, the input DNA acts as a control sample that is used to define true peaks as the regions of the genome with statistically significant higher number of reads than the control/background. Since histone modifications have different shapes, levels of enrichment, and coverage of the genomic region where they are located, normalization against a background must be applied to preserve the shape of each variable’s distribution and make them easily comparable on the same scale. Otherwise, examining the global reads distribution will not take into account the differences in shape of the enrichment profile expected with different ChIP-seq targets.
 ```
 
 **Add screenshot here:**
@@ -348,16 +348,16 @@ H3K27me3.](/Users/bkirs/Documents/matrix_norm_clust_H3K27me3.png)
 
     #?# Do you see an overlap between the peaks of different epigenetic marks? Which epigenetic marks? - 1 pt
 
-    #ANSWER: Yes, there are slight overlaps between the peaks of all three epigenetic marks, but the ones between H3K4me3 and H3K27ac are particularly noticeable. 
+    #ANSWER: Yes, there are slight overlaps between the peaks of all three epigenetic marks. However, the ones between H3K4me3 and H3K27ac are particularly noticeable, especially between the TSS and TES of genes. 
 
     #?# Why do you think these epigenetic marks overlap? - 1 pt
 
-    #ANSWER: In general, broad histone marks such as H3K27me3 do not share motifs with narrow marks such as H3K27ac and H3K4me3. Furthermore, functional combinations of H3K4me3 and H3K27ac are associated with multimark motifs such as active promoters, while H3K27me3 indicates repressed or poised promoters.
+    #ANSWER: Functional combinations of H3K4me3 and H3K27ac are associated with multimark motifs such as active promoters, while H3K27me3 indicates repressed or poised promoters. Thus, we can expect to see frequent co-localization of H3K4me3 and H3K27ac marks. Furthermore, broad histone marks such as H3K27me3 do not generally share motifs with narrow marks such as H3K27ac and H3K4me3. 
 
     #?# Explain the pattern you see for the peaks of H3K27me3, do they look similar or different to the other two marks? Why do you think this happens? - 1pt
 
-    #ANSWER: The H3K27me3 signals are different from the other two because they are more uniformly spread out across the gene body. 
+    #ANSWER: The H3K27me3 signals are different from the other two because they are more uniformly spread out across the gene body. In contrast, the peaks for H3K4me3 and H3K27ac reach their maxima between the TSS and the TES of the gene body. 
 
     #?# Why do you think the borders of the elements have such clearly-defined borders with respect to the ChIP signal? -1 pt
 
-    #ANSWER: I believe this is the case because the elements are the peaks called for each of the epigenetic marks themselves, rather than reference genes as previously. Therefore, 
+    #ANSWER: I believe this is the case because different histone modifications have distinctive preferences in genomic localizations, which dictate the differences in their impact on gene expression. For example, H3K4me3 is associated with transcriptionally active gene promoter regions, thus having clearly-defined borders with respect to the ChIP signal between the TSS and TES of genes. Repressed genes have a much higher density of nucleosomes and can be marked by H3K27me3, which explains why this mark appears throughout the gene body.
