@@ -41,6 +41,7 @@ We will be using a couple of new tools this time. Before we move on to the pract
 #?# Add macs2 and deeptools to your environment created on A1 - 1 pt
 
 #ANSWER: First, we must set up server, log into conda environment, and create a directory for this assignment. Then, we can install the tools in our environment.
+
 ssh bkirsh@137.82.55.186
 conda activate test_env
 mkdir assignment5
@@ -49,7 +50,7 @@ conda install -c bioconda deeptools macs2
 
 ## Install IGV to your local computer after downloading it from: https://software.broadinstitute.org/software/igv/home
 
-#ANSWER: Done.
+#ANSWER: Done :).
 
 ```
 
@@ -83,12 +84,12 @@ scp -r bkirsh@137.82.55.186:/home/bkirsh/assignment5 /mnt/c/Users/bkirs/Document
 ## 3. Change the visualization of the files to see the following position: ** chr3:93,470,124-93,471,058 **
 #?# Include a screenshot of your IGV session right after this code chunk (using the Rmarkdown syntax)  - 2 pt
 
-#ANSWER: Done, please find the screenshot below.
+#ANSWER: Done, please find the screenshot below this code block.
 
 #?# Explore this region by zooming in and out and navigating around. What do you see? Is there something similar across all the different files that stands out on this region? Is there anything peculiar about the DNA sequence at this locus?- 3 pt
 ## Tip: sometimes track signal will be truncated to a pre-set maximum. If you right-click the track label (left) and select "autoscale", it will automatically adust the scales of the track to the range of your data. Try playing around with the track settings to see their effect.
 
-#ANSWER: Visualization with the "autoscale" option shows that the files have a similar signal distribution pattern across the region, in spite of their differing data ranges. By zooming out, we can further observe that this peak spans ~600 bps across all files, and that the nearest genes are over 500 kb away from this region. Lastly, we can see that this region is located near a centromere, where assembly has previously been shown to be difficult and result in erroneous signal. This is a characteristic location of blacklisted regions.
+#ANSWER: Visualization with the "autoscale" option shows that the files have a similar signal distribution pattern across the region, in spite of their differing data ranges. By zooming out, we can further observe that this is a peak that spans ~600 bps across all files, and that the nearest genes, PROS 1 and STX19, are over 500 kb away from this region. Lastly, we can notice that this region is located near a centromere, where assembly has previously been shown to be difficult and result in erroneous signal. This is because centromeric regions of the eukaryotic genome consist of highly repetitive DNA sequences, making them a characteristic location of blacklisted regions.
 
 ## 4. This file (/usr/local/share/data/assignment_5/hg38_blacklisted_regions.bed) contains the hg38 blacklisted regions. Load it into IGV along with all the other files. 
 
@@ -97,7 +98,7 @@ scp bkirsh@137.82.55.186:/usr/local/share/data/assignment_5/hg38.blacklist.bed /
 ## 5. Look at the following region again (chr3:93,470,124-93,471,058). 
 #?# What can you say now about the similarities between the files at this region? In your own words, explain what a blacklisted region is and if you think this region should be excluded a ChIP-seq analysis. - 1.5 pt
 
-#ANSWER: Based on the overlapping nature of all five tracks, the similarity between the files at this region is likely explained by a signal that arises from a blacklisted region rather than true enrichment across all marks. In this context, blacklisted regions correspond to “hyper-chippable” regions of the genome with inexplicably enriched signal across many ChIP experiment types, regardless of what is being IPed (e.g., different types of histone marks). These false-positive peaks are atrifcats introduced by poor annotation or mapping, common at hard-masked telomeric and pericentromeric regions, rather than truly enriched regions. In my opinion, these regions should be excluded in ChIP-seq analysis because they can confound peak calling, making it hard to separate biological noise from meaningful signal. Removing such elements can help us avoid making erroneous correlations that lead to faulty biological conclusions.
+#ANSWER: Based on the overlapping nature of all five tracks, the similarity between the files at this region suggests that this signal arises from a blacklisted region rather than a true enrichment in all marks. In the context of genomics, "blacklisted regions" correspond to hyper-chippable regions of the genome with inexplicably high signal across many ChIP experiment types, regardless of what is being IPed (e.g., different types of histone marks). These false-positive peaks are atrifcats introduced by poor annotation or mapping, both of which are common at repeat-rich hard-masked pericentrometic and telomeric regions. Thus, they do not reflect true enrichment. In my opinion, these regions should be excluded in ChIP-seq analysis because they can confound peak calling, making it hard to separate biological noise from meaningful signal. Removing such elements can help us avoid making erroneous correlations that lead to faulty biological conclusions.
 ```
 
 **Add screenshot of your IGV session here:**
@@ -142,7 +143,7 @@ plotHeatmap -m matrix_norm.gz -o matrix_norm.png --hclust 3 --colorMap Blues
 #ANSWER: First, we must copy the heatmap .png file to our local computer to visualize the file.
 scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm.png /mnt/c/Users/bkirs/Documents/School/BMEG400E/GNMINFRMTCS/static/a5
 
-#ANSWER: Using hierarchical clustering, the set of reference genes contained in the reference_genes.bed file is split into three groups based on their similarities in enrichment pattern for each of the signal files (i.e., H3K27me3, H3K4me3, and H3K27ac). The top profile plots depict the read density for each mark across the transcription start sites of all reference genes. In other words, they display the ChIP signal profile across +/- 1000 bp windows around the TSS and TES of genes for each histone modification. In these plots, the gene clusters are represented by different coloured lines (i.e., dark blue, light blue, and yellow), while the gene region and the read desnity values in the bigWig files (i.e., ChIP-seq signal intensity) correspond to the x- and y-axis, respectively. Below, the heatmaps communicate the same information, whereby the variation in colour hue reflects the magnitude of enrichment or depletion for the different marks. In this case, the darker the blue, the stronger the signal for the histone mark indicated above. Once again, the gene region is represented by the x-axis and a reference colour scale can be used to estimate signal intensity from heatmap colour values.
+#ANSWER: Using hierarchical clustering, the set of reference genes contained in the reference_genes.bed file is split into three groups (i.e., clusters) based on their similarities in enrichment pattern for each of the signal files (i.e., H3K27me3, H3K4me3, and H3K27ac). The top profile plots depict the read density for each mark across the body of all reference genes. In other words, they display the ChIP signal profile across +/- 1000 bp windows around the TSS and TES of genes for each histone modification. In these plots, the gene clusters are represented by different coloured lines (i.e., dark blue, light blue, and yellow), while the gene body region and the read desnity values in the bigWig files (i.e., ChIP-seq signal intensity) correspond to the x- and y-axis, respectively. Below, the heatmaps communicate the same information contained in the plot directly above them, whereby the variation in colour hue reflects the magnitude of enrichment for that mark. Here, the darker the blue, the stronger the signal for the indicated histone mark. Once again, the gene region is represented by the x-axis below the heatmaps and a reference colour scale can be used to estimate signal intensity values from colour hues.
 ```
 
 **Add screenshot here:**
@@ -162,8 +163,7 @@ scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_raw.png /mnt/c/Users/bk
 #?# Include a screenshot of this analysis, below this code block. - 1 pt
 #?# How does this compare to the input-normalized data? Why do you think this is? - 1 pt
 
-#ANSWER: The range of the scale for the heatmaps generated with the raw ChIP-seq data is noticably larger, and the signal intensities appear to be much more binary (i.e., "all-or-nothing", white vs. dark-blue), with H3K27me3 being affected the most. Furthermore, the size of the clusters is different, with cluister_1 being much smaller and cluster_3 being much larger in the raw heat maps. This is because the first set of heatmaps was created by normalizing the data based on the ratio of ChIP to input values, therefore compensating for differences in sequencing depth and mapping efficiency. In this sense, the input DNA acts as a control sample that is used to define true peaks as the regions of the genome with statistically significant higher number of reads than the control/background. Since histone modifications have different shapes, levels of enrichment, and coverage of the genomic region where they are located, normalization against a background must be applied to preserve the shape of each variable’s distribution and make them easily comparable on the same scale. Otherwise, examining the global reads distribution will not take into account the differences in shape of the enrichment profile expected with different ChIP-seq targets.
-
+#ANSWER: The range of the scale for the heatmaps generated with the raw ChIP-seq data is noticably larger, varying between approximately 0 and 1,2000 as compared to -3 and 6. Furthermore, the signal intensities appear to be much more binary, or "all-or-nothing," with abrupt changes between colour hues reflecting these significant differences in value. The size of the clusters is also different, with cluister_1 being much smaller and cluster_3 being much larger in the heatmaps produced using the non-normalized files. Out of the three marks, H3K27me3 seems to be affected the most, displaying signal values that near zero across the board. This is because the first set of heatmaps was created by normalizing the data based on the ratio of ChIP to input values, therefore compensating for differences in sequencing depth and mapping efficiency. As a result, the input DNA acts as a control sample that can be used to define true peaks as regions of the genome with statistically significant higher number of reads than the control/background. Since histone modifications have different shapes, levels of enrichment, and coverage of the genomic region where they are located, global reads distribution is unable to reflect the unique shape of the enrichment profile expected with different ChIP-seq targets. Thus, normalization against a background must be applied to preserve the each variable’s distribution and make them comparable on the same scale.
 ```
 
 **Add screenshot here:**
@@ -214,7 +214,7 @@ Macs2 calls the peaks by analyzing the enrichments of sequences in the genome co
 
 #?# Why do you consider those regions to have an enrichment? Would you need to confirm that the enrichment is statistically significant? If so, what do you think would be a way to test for the significance (you can mention the tools used on this assignment or explain conceptually what would you do to confirm an enrichment)? - 1 pt
 
-#ANSWER: In the H3K4me3 signal track, there are two distinctly sharp peaks with noticeably higher amplitude than the rest of the region. In comparison, the input track contains consistent and uniformly distributed background signal, without anbormally high amplitude regions or clear peak separation. Although a visual inspection of the H3K4me3 signal track enables peak visualization, further statistical testing is required to confirm their significance. I would use Bioconductor's ChipQC package or MACS and deepTools themselves to assess signal-to-noise ratio based on metrics such as strand cross-correlation (SE), irreproducibility discovery rate (IDR), and fingerprint plots. These quality control procedures help with distinguishing the ChIP signal from the background signal and can be calculated using the tools mentioned above.
+#ANSWER: In the H3K4me3 signal track, there are two distinctly sharp peaks with noticeably higher amplitude than the rest of the region. In comparison, the input track is homogeneous, containing consistent and uniformly distributed background signal without anbormally high amplitude regions or clear peak separation. Although a visual inspection of the H3K4me3 signal track allows us to infer the presence of two peaks, further statistical testing is required to confirm their significance. I would use Bioconductor's ChipQC package or MACS2 and deepTools themselves to assess signal-to-noise ratio based on metrics and plots, including strand cross-correlation (SE), irreproducibility discovery rate (IDR), and fingerprint plots. These quality control tools allow us to assess the distribution of signal, distinguish ChIP signal from background signal or artificially high signal in blacklisted regions, and identify significant peaks.
 
 ## 5. Load into the same session the following files:
 ### c. H3K4me3 normalized using the input bigWig file that was pre-computed and you used on section 2
@@ -227,7 +227,7 @@ Macs2 calls the peaks by analyzing the enrichments of sequences in the genome co
 
 #?# Does the region/s you thought had an enrichment show differences between the input and the H3K4me3 mark in the bamCompare (file c)? - 0.5 pt
 
-#ANSWER: Yes. Once again, the two peaks in the bamCompare file can be easily visualized because they lie on the positive axis as compared to the remaining background signal, which is located on the negative axis.
+#ANSWER: Yes. Once again, the two peaks can be more easily visualized in the bamCompare file than the input because they lie on the positive axis relative to the background signal, which is located on the negative axis.
 
 #?# Are these visually enriched regions you selected, found in file d (narrowPeak)? What does that mean? - 1 pt
 
@@ -235,7 +235,7 @@ Macs2 calls the peaks by analyzing the enrichments of sequences in the genome co
 
 #?# Add a screenshot of your IGV session right after this chunk, using Rmarkdown syntax - 1pt
 
-#ANSWER: Done, please find the screenshot below.
+#ANSWER: Done, please find the screenshot below :).
 ```
 
 \*\*\* SCREENSHOT OF IGV\*\*\*
@@ -286,17 +286,17 @@ scp bkirsh@137.82.55.186:/home/bkirsh/assignment5/matrix_norm_clust_H3K27ac.png 
 ``` {}
 #?# Do you see an overlap between the peaks of different epigenetic marks? Which epigenetic marks? - 1 pt
 
-#ANSWER: Yes, there are slight overlaps between the peaks of all three epigenetic marks, but the ones between H3K4me3 and H3K27ac are particularly noticeable. This can be concluded on the basis that they have a similar enrichment pattern, which is focused between the TSS and TES or, in this case, the start and end of peaks. 
+#ANSWER: Yes, there are slight overlaps between the peaks of all three epigenetic marks, but the ones between H3K4me3 and H3K27ac are particularly noticeable. This is observed in the similarities between the enrichment pattern of these two marks, which are equal width and focused between the TSS and TES of the elements (i.e. the start and end of called peaks). 
 
 #?# Why do you think these epigenetic marks overlap? - 1 pt
 
-#ANSWER: Different histone modifications have distinctive preferences in genomic localizations, which dictate the differences and similarities with respect to their impact on gene expression. Since H3K4me3 and H3K27ac are both associated with transcriptionally activate promoter regions, it is common to observe their co-localization. Furthermore, functional combinations of these two histones are associated with multimark motifs such as promoters and enhancers. On the other hand, H3K27me3 indicates repressed or poised promoters. Lastly, broad histone marks such as H3K27me3 do not generally share motifs with narrow marks such as H3K27ac and H3K4me3.
+#ANSWER: Different histone modifications have distinct preferences in genomic localizations, which dictate the differences and/or similarities in their impact on gene expression. Since H3K4me3 and H3K27ac are both associated with transcriptionally activate genes, it is common to observe their co-localization, especially near TTSs. Furthermore, functional combinations of these two histones are associated with multimark motifs such as active promoters. On the other hand, H3K27me3 indicates repressed or poised promoters. Lastly, broad histone marks such as H3K27me3 do not generally share motifs with narrow marks such as H3K27ac and H3K4me3.
 
 #?# Explain the pattern you see for the peaks of H3K27me3, do they look similar or different to the other two marks? Why do you think this happens? - 1pt
 
-#ANSWER: The H3K27me3 signals are different from the other two because they are more uniformly spread out across the plotted region (i.e., called peaks), and generally display a more mild signal. In contrast, the peaks for H3K4me3 and H3K27ac reach their maxima between the TSS and the TES of the region. This confirms that H3K27me3 is a broad histone mark, whereas the latter two constitute narrow peaks. 
+#ANSWER: The H3K27me3 signals are different from the other two because they are more uniformly spread out between the TSS and TES of elements (i.e., called peaks). In contrast, H3K4me3 and H3K27ac peak sharply within the TSS and the TES of elements. This confirms that H3K27me3 is a broad histone mark, whereas the latter two constitute narrow peaks. Another distinct feature of this mark is the presence of bivalent promoters, which are observed in its interaction with H3K4me3.
 
 #?# Why do you think the borders of the elements have such clearly-defined borders with respect to the ChIP signal? -1 pt
 
-#ANSWER: I believe this is the case because because the reference file consists of peaks rather than a set of genes. Thus, we are plotting the signal intensity of peaks (i.e. input files of the signal for H3K27me3, H3K4me3, and H3K27ac) over regions that consist of the called peaks themselves (i.e., Mcas2-called peaks for H3K27me3, H3K4me3, and H3K27ac). As a result, we should expect to see a more clear (and sometimes perfect) alignment/overlap between the input files and the called peaks, creating well-defined element borders (i.e., called peaks) with respect to the ChIP signal (i.e., input signal). This is especially true when looking at the heatmap or profile plot for the mark whose reference file was used (e.g., when looking at the H3K4me3 column in the image generated using the H3K4me3 called peaks as reference).
+#ANSWER: I believe this is the case because because the reference files consist of called peaks rather than a set of genes. Thus, we are plotting ChIP-seq signals (i.e. input files of the signal for H3K27me3, H3K4me3, and H3K27ac) over regions that consist of validated ChIP-seq signals themselves (i.e., MACS2-called peaks for H3K27me3, H3K4me3, and H3K27ac). As a result, we should expect to see a more clear (and sometimes perfect) alignment/overlap between the input files and the called peaks, creating well-defined element borders (i.e., significant signal) with respect to the ChIP signal (i.e., alleged signal). This is especially true when looking at the heatmap or profile plot for the mark whose reference file was used (e.g., when looking at the H3K4me3 column in the image generated using the H3K4me3 called peaks as reference).
 ```
