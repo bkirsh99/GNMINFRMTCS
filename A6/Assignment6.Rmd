@@ -1,0 +1,385 @@
+---
+title: "Genome Informatics A6"
+author: ""
+date: "24/02/2021"
+#output: html_document
+output:
+  github_document:
+    toc: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install any of these you might not have already
+library(ggplot2)
+library(edgeR)
+library(reshape)
+```
+*Today we will be looking at a differential ATAC-seq dataset between cells treated with an anti BAF protac and control (untreated) cells. The cell type is HAP1, a cancer cell line with a near-haploid genome. We will use this dataset to explore differential analysis. *
+
+*The GEO entry is located here, where you can read more about the experiments: https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE148175 *
+
+*This is the paper: https://www.nature.com/articles/s41588-021-00777-3 *
+
+*"Acute BAF perturbation causes immediate changes in chromatin accessibility"*
+
+
+```{r}
+#download the data
+atacSeqData = read.table(textConnection(readLines(gzcon(url("ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE148nnn/GSE148175/suppl/GSE148175_count_matrix_raw_atac_BRM014_ACBI1.csv.gz")))), 
+                      sep=",", stringsAsFactors = FALSE, header = TRUE)
+```
+
+
+```{r}
+#create a sample metadata data.frame
+samples = data.frame(ID = names(atacSeqData)[2:ncol(atacSeqData)])
+samples$replicate = gsub("(R[12])_([0-9]+[minh]+)_(.*)$","\\1",samples$ID)
+samples$timeName = gsub("(R[12])_([0-9]+[minh]+)_(.*)$","\\2",samples$ID)
+samples$treatment = gsub("(R[12])_([0-9]+[minh]+)_(.*)$","\\3",samples$ID)
+samples$treatment[samples$treatment=="N"]="BRM014"
+samples$time= as.numeric(gsub("[a-z]*","",samples$timeName))
+samples$time[grepl("min",samples$timeName)]=samples$time[grepl("min",samples$timeName)]/60
+```
+
+
+# Part 1: understanding the experiment
+
+*Now using `samples` make a plot showing the experimental design, with time on the x axis, treatment on the y axis, and one plot on the left and one on the right for the two replicates (e.g. using `facet_grid`).*
+
+### `#?#` *Make the above plot. Each point should represent one of the samples.  - 1 pt*
+```{r}
+#here, if the point is there, it means such a sample exists, if absent it means that there is no such sample
+
+p <- ggplot(samples, aes(time, treatment)) + geom_point()
+p + facet_grid(cols = vars(replicate))
+
+```
+
+*In this study, one of the things they were comparing was BRM014 to DMSO. The drug BRM014 is dissolved in DMSO, so DMSO alone is the appropriate control to gauge the effect of BRM014.*
+
+### `#?#` *Can we compare BRM014 to DMSO across all time points? Why/why not?  - 1 pt*
+#ANSWER: No.
+
+# Part 2: QC
+
+*With most genomics data, it is important both that samples have sufficient coverage, and that the samples have similar coverage. Either case can lead to underpowered analysis, or misleading results. Calcualte the read coverage for each sample. *
+
+### `#?#` Make a plot with read coverage on the y-axis (total number of reads) and the samples on the x-axis. - 3 pt*
+
+```{r}
+# there are many ways you could do this; one of which is using the melt/cast functions from reshape
+
+count_matrix <- atacSeqData[,2:ncol(atacSeqData)]
+sum_matrix <- data.frame(t(colSums(count_matrix)))
+melted_matrix <- melt(sum_matrix, id.vars=c())
+#melted_matrix <- melt(count_matrix, id.vars=c())
+#sum_matrix <- aggregate(. ~ variable, melted_matrix, sum)
+q <- ggplot(data=melted_matrix, aes(x=variable, y=value)) + geom_bar(stat="identity") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+```
+
+### `#?#` *Which sample has the most coverage? - 0.5 pt*
+```{r}
+
+melted_matrix[which.max(melted_matrix$value),]
+
+#ANSWER: The sample with the highest coverage is R1_24h_DMSO, totaling 4,686,253 reads.
+
+```
+
+### `#?#` *Which sample has the least? - 0.5 pt*
+```{r}
+
+melted_matrix[which.min(melted_matrix$value),]
+
+#ANSWER: The sample with the lowest coverage is R1_6h_control, totaling 2,341,332 reads.
+
+```
+
+### `#?#` *What is the % difference between the max and min (relative to the min)? - 0.5 pt*
+```{r}
+
+max <- melted_matrix[which.max(melted_matrix$value),2]
+min <- melted_matrix[which.min(melted_matrix$value),2]
+pct <- ( max - min ) / min * 100
+
+#ANSWER: The percent difference is 1.001533, meaning that R1_24h_DMSO has 100.1533% greater coverage than R1_6h_control.
+
+```
+
+*In cases where samples have vastly different coverage, you can potentially down-sample the higher-coverage samples. Sometimes, throwing out the data in this way can also introduce new problems, so we're going to stick with the data we have.*
+
+*For this assignment, we will look only at BI_protac vs control data. *
+
+### `#?#` *Create a new data.frame containing only the BI_protac and control samples - 1 pt*
+```{r}
+
+library(dplyr)
+filters <- c('BI_protac' , 'control')
+filter_df <- atacSeqData[,grepl(paste(filters, collapse = "|") , names(atacSeqData) )]
+
+```
+
+### `#?#` *For this subset, calculate the counts per million reads (CPM) for each sample - 2 pt*
+```{r}
+
+cpm_df <- data.frame(cpm(filter_df))
+
+```
+
+
+### `#?#` *Plot the kernel density estimate for CPM (x axis). 1 curve per sample, different colours per curve. - 1 pt*
+
+```{r}
+
+library(reshape2)
+melted_cpm <- melt(cpm_df, id.vars=c())
+r <- ggplot(melted_cpm, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel density estimate for counts per million reads (CPM)", y = "Density", x = "Counts per million (CPM)", color = "Sample")
+
+```
+
+### `#?#` *Plot the kernel density estimate for log(CPM+1) (x axis), coloured as before - 1 pt*
+
+```{r}
+
+melted_log_cpm <- mutate(melted_cpm, value = log(value+1))
+s <- ggplot(melted_log_cpm, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel density estimate for normalized counts per million reads (log(CPM+1))", y = "Density", x = "Normalized counts per million (log(CPM+1))", color = "Sample")
+
+```
+
+### `#?#` *Why do you think log-transforming is usually performed when looking at genomics data? What about adding 1 before log transforming? - 2 pt*
+
+#ANSWER: In genomics, highly skewed distributions and heteroscedasticity are often observed in linear scale, resulting in biased parametric statistical tests and a poor reflection of differential expression. Thus, log transformation can be used to approximate a normal distribution that improves symmetry and is better able to accomodate orders of magnitude of differential expression. Furthermore, many statistical tests require normally-distributed data. The addition of 1 before log transforming is done to avoid errors arising from taking log(0), which is especially important in studies where the control group dose is set to zero and log(x) does not exist.
+
+
+### `#?#` *Some regions have very large CPMs. Inspect the peaks for which CPM>400. What do you notice about them? 3 pt*
+```{r}
+
+cpm_df$region <- atacSeqData$region
+melted_region <- melt(cpm_df, id.vars = "region")
+cpm_400 <- filter(melted_region, value > 400)
+distinct(cpm_400,region)
+
+#ANSWER: The peaks are located either on chr1 or chrM, but mainly on the mitochondrial chromosome. Thus, the large CPMs are likely due to.
+
+```
+
+*Normally, we would remove some of these regions before continuing (and would redo the above steps). Since this is an assignment, we will continue with the data as-is.*
+
+*Often a good first step is to see if the data look good. One way to do this is by seeing whether or not the signals in each sample correlate with each other in ways you expect.*
+
+### `#?#` *Calculate the pairwise correlations between log(CPM+1)s for the samples and plot them as a heatmap (samples x samples) - 3 pt*
+```{r}
+
+#norm_cpm_df <- log( cpm_df[, -which(names(cpm_df) == "region")] + 1 )
+norm_cpm_df <- log( data.frame(cpm(count_matrix)) + 1 )
+cc <- cor(norm_cpm_df, method = "pearson")
+melted_cc <- melt(cc)
+t <- ggplot(data = melted_cc, aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "white") +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+```
+
+### `#?#` *What do you expect the correlations between replicates to look like? Is that what you see? - 2 pt*
+
+
+
+*It is common to exclude some regions from analysis. For instance, we won't be able to robustly identify those that are differential but have low coverage even if they are truly differential, so there is no point testing these. We will also remove mitochondrial regions, a common contaminant of ATAC-seq data.*
+
+
+### `#?#` *Filter your data, retaining only regions where the average counts per sample is greater than 10, and also remove mitochondrial regions - 3 pt*
+```{r}
+
+filtered_atacSeqData <- atacSeqData[rowSums(atacSeqData < 10)==0, , drop = FALSE]
+filtered_atacSeqData <- filtered_atacSeqData[!grepl("chrM",filtered_atacSeqData$region),]
+
+```
+
+### `#?#` *How many peaks did you have before? How many do you have now? - 1 pt*
+```{r}
+
+peaks_before <- nrow(atacSeqData)
+peaks_after <- nrow(filtered_atacSeqData)
+
+#ANSWER: Before, there were 56,617 peaks. Now, there are 33,963.
+
+```
+
+
+# Part 3: Differential ATAC
+
+*We want to know what regions are differentially accessible between BI_protac and the control.* 
+
+*Today, we're going to use edgeR, which is designed for RNA-seq, but works well on ATAC-seq as well. The user guide is here:* https://www.bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
+
+
+### `#?#` *Make a count matrix called `countMatrix` for the BI_protac and control samples, including only the peaks we retained above - 2 pt*
+```{r}
+
+```
+
+*EdgeR is exceptionally versatile, with many different options for analysis. Today, you're going to use the GLM-quasi-likelihood approach to calculate differential accessibility. We are providing the first example analysis below, which you can modify in subsequent steps. You will need to understand what the steps do, so read the appropriate documentation. *
+```{r}
+curSamples = samples[match(names(countMatrix), samples$ID),];
+y = DGEList(counts=countMatrix, group=curSamples$treatment)
+y = calcNormFactors(y)
+designPaired = model.matrix(~curSamples$treatment + curSamples$timeName)  
+# we are using timeName here to make sure that time is treated as a categorical variable. Had we more time points it might make sense to treat time as a value.
+y = estimateDisp(y, designPaired)
+fitPaired = glmQLFit(y, designPaired)
+qlfPairedTime6vs24 = glmQLFTest(fitPaired, coef=3) 
+qlfPairedTreatControlvsProtac = glmQLFTest(fitPaired, coef=2)
+
+allDEStatsPairedTreatControlvsProtac = as.data.frame(topTags(qlfPairedTreatControlvsProtac,n=nrow(countMatrix)))
+allDEStatsPairedTreatControlvsProtac$region=row.names(allDEStatsPairedTreatControlvsProtac)
+
+allDEStatsPairedTime6vs24 = as.data.frame(topTags(qlfPairedTime6vs24,n=nrow(countMatrix)))
+allDEStatsPairedTime6vs24$region=row.names(allDEStatsPairedTime6vs24)
+
+```
+*While the differential analysis has been done in this case, before we look at the results, we are going to check if the data appear to be normalized correctly. Also include a loess line of best fit, and the line y=0.*
+
+### `#?#` *Make an MA plot for allDEStatsPairedTreatControlvsProtac -2pt*
+```{r}
+
+```
+
+### `#?#` *Make an MA plot for allDEStatsPairedTime6vs24 - 1 pt*
+```{r}
+
+```
+
+*Now we're going to test loess normalization instead.* 
+
+
+### `#?#` *Perform the same differential peak analysis using loess regularization. - 1 pt*
+```{r}
+#Note: the Bioconductor package csaw implements loess regularization in a way that is compatible with edgeR
+library(csaw)
+
+
+```
+
+### `#?#` *Make the same two MA plots as before, but this time using the loess normalized analysis - 1 pt*
+```{r}
+
+
+
+```
+
+### `#?#` *What was the first normalization method? What changed in the MA plots? Which analysis do you think is more reliable and why? - 4 pt*
+
+
+
+# Part 4: GC bias
+
+*Next, we will look at potential GC bias in the data. We will again use bioconductor *
+
+### `#?#` *Convert the region IDs to a GRanges object - 3 pt*
+```{r}
+#note that the names of your peaks are of the format <chr>:<startPos>-<endPos>
+library(GenomicRanges)
+
+
+
+```
+
+
+### `#?#` *Extract the genomic DNA sequences for each peak using hg38 - 3 pt*
+*See for relevant documentation: https://bioconductor.org/packages/release/workflows/vignettes/sequencing/inst/doc/sequencing.html *
+```{r}
+library(Biostrings)
+library(BSgenome.Hsapiens.UCSC.hg38)
+
+```
+
+
+*Now we will see if there's any relationship between peak CPM and GC content for each of the samples.*
+
+### `#?#` *Create scatter plots (one per sample, e.g. using facet_wrap), including lines of best fit (GAM), where each plot shows GC content (x axis) vs CPM (y axis) for each peak (points) -2pt*
+```{r}
+#please limit the y axis to between 0 and 50
+
+```
+
+### `#?#` *Repeat the above, but this time showing only the lines of best fit and all on the same plot - 2 pt*
+```{r}
+
+```
+
+
+### `#?#` *Given this result, predict whether we will see a significant relationship between GC content and logFC in our differential peak analysis (loess-normalized). Justify your prediction. Predicting "wrong" will not be penalized, as long as your justification is correct. Don't retroactively change your answer. - 2 pt*
+
+
+
+
+
+### `#?#` *Plot the relationship between GC and logFC for the loess-normalized ControlvsProtac analysis. Also include a line of best fit (blue) and y=0 (red) - 2 pt*
+```{r}
+
+```
+
+### `#?#` *Now plot the same thing for the NON loess-normalized ControlvsProtac analysis. - 1 pt*
+```{r}
+
+
+```
+
+
+### `#?#` *Was your prediction correct? Do you think we should also account for GC normalization in our differential ATAC analysis? Why/why not? - 3 pt*
+
+
+
+*We will leave GC normalization as an optional exercise, and will not actually do it here.*
+
+# Part 5: Differential analysis results
+
+### `#?#` *Suppose we perform the analyses above, redoing the differential analysis once more with GC normalization, and also considering that we tested loess and the default normalization methods. Did we P-hack? Why or why not? - 2 pt*
+
+
+
+*Going forward, we will only use the initial analysis (**not loess normalized**)*
+
+### `#?#` *Now considering the two comparisons (6 vs 24 hours, and protac vs control). EdgeR performed a correction for MHT, but if we want to analyze the results from both comparisons, do we need to re-adjust to account for the fact that we tested two different hypothesis sets (time and treatment)? Why/not? - 2 pt*
+
+
+
+
+### `#?#` *How many differential peaks did you find (FDR<0.01). - 1 pt*
+```{r}
+
+
+```
+
+### `#?#` *Make a volcano plot of the allDEStatsPairedTreatControlvsProtac, with -log10(p-value) on the y axis and logFC on the x. Colour points that are significant at an FDR<0.01. - 2 pt*
+```{r}
+
+
+```
+
+
+
+
+### `#?#` *Plot the logCPM (x axis) by -log10(Pvalue) (y axis), again colouring by FDR<0.01. - 2 pt*
+```{r}
+
+
+```
+
+### `#?#` *Do you think our initial filtering on peaks with at least 10 reads on average per sample was a good choice? Why or why not?*
+
+
+
+*At this point there are many other follow ups you can and would do for a real differential analysis, but we leave these as optional exercises. For example:*
+1. Confirming that the differential peaks look correct (e.g. CPM heatmap)
+2. Confirming that peaks look differential on the genome browser
+3. Looking for motif enrichment
+4. Performing a GREAT analysis, including functional enrichment and assigning peaks to genes
+
+*Knit your assignment as a github_document and submit the resulting .md and this .Rmd to your github, and complete the assignment submission on Canvas. Make sure to include the graphs with your submission. *
+ 
+
