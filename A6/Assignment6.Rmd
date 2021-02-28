@@ -220,6 +220,8 @@ peaks_after <- nrow(filtered_atacSeqData)
 ### `#?#` *Make a count matrix called `countMatrix` for the BI_protac and control samples, including only the peaks we retained above - 2 pt*
 ```{r}
 
+countMatrix <- filtered_atacSeqData[,grepl(paste(filters, collapse = "|") , names(filtered_atacSeqData) )]
+
 ```
 
 *EdgeR is exceptionally versatile, with many different options for analysis. Today, you're going to use the GLM-quasi-likelihood approach to calculate differential accessibility. We are providing the first example analysis below, which you can modify in subsequent steps. You will need to understand what the steps do, so read the appropriate documentation. *
