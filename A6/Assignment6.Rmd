@@ -279,30 +279,33 @@ abline(h = 0, col = 'blue')
 library(csaw)
 
 y_loess <- DGEList(counts=countMatrix, group=curSamples$treatment)
-#se <- SummarizedExperiment(list(counts=countMatrix))
-se <- SummarizedExperiment(assays=list(counts=countMatrix))
-#se <- SummarizedExperiment(list(counts=y_loess$counts))
-se$totals <- colSums(countMatrix)
-normOffsets(se)
-normOffsets(y_loess)
+y_loess <- normOffsets(y_loess)
+y_loess = estimateDisp(y_loess, designPaired)
+fitPaired_loess = glmQLFit(y_loess, designPaired)
+qlfPairedTime6vs24_loess = glmQLFTest(fitPaired_loess, coef=3) 
+qlfPairedTreatControlvsProtac_loess = glmQLFTest(fitPaired_loess, coef=2)
 
 ```
 
 ### `#?#` *Make the same two MA plots as before, but this time using the loess normalized analysis - 1 pt*
 ```{r}
 
-plotSmear(TreatControlvsProtac_loess, lowess = TRUE)
-abline(h=0, col = "blue")
+de <- decideTestsDGE(qlfPairedTreatControlvsProtac_loess, p=0.05, adjust='BH')
+detags <- rownames(qlfPairedTreatControlvsProtac_loess)[as.logical(de)]
+plotSmear(qlfPairedTreatControlvsProtac_loess, de.tags=detags, main='MA Plot for loess-normalized allDEStatsPairedTreatControlvsProtac', lowess=TRUE)
+abline(h = 0, col = 'blue')
 
-plotSmear(Time6vs24_loess, lowess = TRUE)
-abline(h=0, col = "blue")
+de <- decideTestsDGE(qlfPairedTime6vs24_loess, p=0.05, adjust='BH')
+detags <- rownames(qlfPairedTime6vs24_loess)[as.logical(de)]
+plotSmear(qlfPairedTime6vs24_loess, de.tags=detags, main='MA Plot for loess-normalized allDEStatsPairedTime6vs24', lowess=TRUE)
+abline(h = 0, col = 'blue')
 
 
 ```
 
 ### `#?#` *What was the first normalization method? What changed in the MA plots? Which analysis do you think is more reliable and why? - 4 pt*
 
-#ANSWER: The first normalization utilized scaling factors based on the weighted trimmed mean of M-values (TMM) to convert raw library sizes into effective library sizes. The MA plots reflect differences in the distribution of differentially accessible regions using TMM and loess-based normalization methods. The upwards shift in differential accessibility distribution is present in TMM normalized data, but corrected with the loess normalization. In my opinion, the loess method is more reliable in this case because . The TMM normalization method assumes that most regions of the genome are not truly differentially accessible, and should be applied when signal differences are presumed to be caused by technical or systematic biases in library ATAC distribution.On the other hand, loess-based normalization assumes a symmetric global distribution in which there are no true biological global differences in ATAC reaction efficiency or distribution, and any evidence of these biases are technical and should be removed. normalizes the signal distribution locally based on extent of ATAC signal abundance. As a result, the loess fit 
+#ANSWER: The first normalization utilized scaling factors based on the weighted trimmed mean of M-values (TMM) to convert raw library sizes into effective library sizes. The MA plots reflect differences in the distribution of differentially accessible regions using TMM and loess-based normalization methods. The upwards shift in differential accessibility distribution is present in TMM normalized data, but corrected with the loess normalization. In my opinion, the loess method is more reliable in this case because . The TMM normalization method assumes that most regions of the genome are not truly differentially accessible, and should be applied when signal differences are presumed to be caused by technical artifacts or systematic biases in library ATAC distribution (e.g., mapping errors, PCR duplicates). On the other hand, loess-based normalization assumes a symmetric global distribution in which there are no true biological global differences in ATAC reaction efficiency or distribution, and any evidence of these biases are technical and should be removed. normalizes the signal distribution locally based on extent of ATAC signal abundance. As a result, the loess fit 
 TMM 
 
 # Part 4: GC bias
