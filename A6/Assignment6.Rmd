@@ -80,6 +80,7 @@ melted_matrix <- melt(sum_matrix, id.vars=c())
 #melted_matrix <- melt(count_matrix, id.vars=c())
 #sum_matrix <- aggregate(. ~ variable, melted_matrix, sum)
 q <- ggplot(data=melted_matrix, aes(x=variable, y=value)) + geom_bar(stat="identity") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+q
 
 ```
 
@@ -107,6 +108,7 @@ melted_matrix[which.min(melted_matrix$value),]
 max <- melted_matrix[which.max(melted_matrix$value),2]
 min <- melted_matrix[which.min(melted_matrix$value),2]
 pct <- ( max - min ) / min * 100
+pct
 
 #ANSWER: The percent difference is 1.001533, meaning that R1_24h_DMSO has 100.1533% greater coverage than R1_6h_control.
 
@@ -140,6 +142,7 @@ cpm_df <- data.frame(cpm(filter_df))
 library(reshape2)
 melted_cpm <- melt(cpm_df, id.vars=c())
 r <- ggplot(melted_cpm, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel density estimate for counts per million reads (CPM)", y = "Density", x = "Counts per million (CPM)", color = "Sample")
+r
 
 ```
 
@@ -149,6 +152,7 @@ r <- ggplot(melted_cpm, aes(x=value, color=variable)) + geom_density() + labs(ti
 
 melted_log_cpm <- mutate(melted_cpm, value = log(value+1))
 s <- ggplot(melted_log_cpm, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel density estimate for normalized counts per million reads (log(CPM+1))", y = "Density", x = "Normalized counts per million (log(CPM+1))", color = "Sample")
+s
 
 ```
 
@@ -181,6 +185,7 @@ norm_cpm_df <- log( data.frame(cpm(count_matrix)) + 1 )
 cc <- cor(norm_cpm_df, method = "pearson")
 melted_cc <- melt(cc)
 t <- ggplot(data = melted_cc, aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "white") +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+t
 
 ```
 
@@ -248,10 +253,20 @@ allDEStatsPairedTime6vs24$region=row.names(allDEStatsPairedTime6vs24)
 ### `#?#` *Make an MA plot for allDEStatsPairedTreatControlvsProtac -2pt*
 ```{r}
 
+de <- decideTestsDGE(qlfPairedTreatControlvsProtac, p=0.05, adjust='BH')
+detags <- rownames(qlfPairedTreatControlvsProtac)[as.logical(de)]
+plotSmear(qlfPairedTreatControlvsProtac, de.tags=detags, main='MA Plot for allDEStatsPairedTreatControlvsProtac', lowess=TRUE)
+abline(h = 0, col = 'blue')
+
 ```
 
 ### `#?#` *Make an MA plot for allDEStatsPairedTime6vs24 - 1 pt*
 ```{r}
+
+de <- decideTestsDGE(qlfPairedTime6vs24, p=0.05, adjust='BH')
+detags <- rownames(qlfPairedTime6vs24)[as.logical(de)]
+plotSmear(qlfPairedTime6vs24, de.tags=detags, main='MA Plot for allDEStatsPairedTime6vs24', lowess=TRUE)
+abline(h = 0, col = 'blue')
 
 ```
 
@@ -263,19 +278,32 @@ allDEStatsPairedTime6vs24$region=row.names(allDEStatsPairedTime6vs24)
 #Note: the Bioconductor package csaw implements loess regularization in a way that is compatible with edgeR
 library(csaw)
 
+y_loess <- DGEList(counts=countMatrix, group=curSamples$treatment)
+#se <- SummarizedExperiment(list(counts=countMatrix))
+se <- SummarizedExperiment(assays=list(counts=countMatrix))
+#se <- SummarizedExperiment(list(counts=y_loess$counts))
+se$totals <- colSums(countMatrix)
+normOffsets(se)
+normOffsets(y_loess)
 
 ```
 
 ### `#?#` *Make the same two MA plots as before, but this time using the loess normalized analysis - 1 pt*
 ```{r}
 
+plotSmear(TreatControlvsProtac_loess, lowess = TRUE)
+abline(h=0, col = "blue")
+
+plotSmear(Time6vs24_loess, lowess = TRUE)
+abline(h=0, col = "blue")
 
 
 ```
 
 ### `#?#` *What was the first normalization method? What changed in the MA plots? Which analysis do you think is more reliable and why? - 4 pt*
 
-
+#ANSWER: The first normalization utilized scaling factors based on the weighted trimmed mean of M-values (TMM) to convert raw library sizes into effective library sizes. The MA plots reflect differences in the distribution of differentially accessible regions using TMM and loess-based normalization methods. The upwards shift in differential accessibility distribution is present in TMM normalized data, but corrected with the loess normalization. In my opinion, the loess method is more reliable in this case because . The TMM normalization method assumes that most regions of the genome are not truly differentially accessible, and should be applied when signal differences are presumed to be caused by technical or systematic biases in library ATAC distribution.On the other hand, loess-based normalization assumes a symmetric global distribution in which there are no true biological global differences in ATAC reaction efficiency or distribution, and any evidence of these biases are technical and should be removed. normalizes the signal distribution locally based on extent of ATAC signal abundance. As a result, the loess fit 
+TMM 
 
 # Part 4: GC bias
 
@@ -286,6 +314,7 @@ library(csaw)
 #note that the names of your peaks are of the format <chr>:<startPos>-<endPos>
 library(GenomicRanges)
 
+countMatrix$region <- GRanges(countMatrix$region)
 
 
 ```
