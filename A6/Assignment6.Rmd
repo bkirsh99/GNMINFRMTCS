@@ -184,7 +184,7 @@ distinct(cpm_400,region)
 norm_cpm_df <- log( data.frame(cpm(count_matrix)) + 1 )
 cc <- cor(norm_cpm_df, method = "pearson")
 melted_cc <- melt(cc)
-t <- ggplot(data = melted_cc, aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "white") +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+t <- ggplot(data = melted_cc, aes(x=X1, y=X2, fill=value)) + geom_tile(color = "white") +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 t
 
 ```
@@ -305,8 +305,9 @@ abline(h = 0, col = 'blue')
 
 ### `#?#` *What was the first normalization method? What changed in the MA plots? Which analysis do you think is more reliable and why? - 4 pt*
 
-#ANSWER: The first normalization utilized scaling factors based on the weighted trimmed mean of M-values (TMM) to convert raw library sizes into effective library sizes. The MA plots reflect differences in the distribution of differentially accessible regions using TMM and loess-based normalization methods. The upwards shift in differential accessibility distribution is present in TMM normalized data, but corrected with the loess normalization. In my opinion, the loess method is more reliable in this case because . The TMM normalization method assumes that most regions of the genome are not truly differentially accessible, and should be applied when signal differences are presumed to be caused by technical artifacts or systematic biases in library ATAC distribution (e.g., mapping errors, PCR duplicates). On the other hand, loess-based normalization assumes a symmetric global distribution in which there are no true biological global differences in ATAC reaction efficiency or distribution, and any evidence of these biases are technical and should be removed. normalizes the signal distribution locally based on extent of ATAC signal abundance. As a result, the loess fit 
-TMM 
+#ANSWER: The first normalization utilized scaling factors based on the weighted trimmed mean of M-values (TMM) to convert raw library sizes into effective library sizes. The differences between TMM and loess normlization are especially visible in the MA plots that compare the treatment status of samples. In MA plots, peaks that are significantly differential are displayed in red. 
+
+#s it depicts more significant differentially accessible regions in control samples than Protac. Furthermore, the loess-based method depicts a slight increase in accessibility, rather than the decrease observed with TMM normalization. In my opinion, the loess method is more reliable in this case because . The TMM normalization method assumes that most regions of the genome are not truly differentially accessible, and should be applied when signal differences are presumed to be caused by technical artifacts or systematic biases in library ATAC distribution (e.g., mapping errors, PCR duplicates). On the other hand, loess-based normalization assumes a symmetric global distribution in which there are no true biological global differences in ATAC reaction efficiency or distribution, and any evidence of these biases are technical and should be removed. normalizes the signal distribution locally based on extent of ATAC signal abundance. As a result, the loess fit 
 
 # Part 4: GC bias
 
@@ -317,7 +318,10 @@ TMM
 #note that the names of your peaks are of the format <chr>:<startPos>-<endPos>
 library(GenomicRanges)
 
-countMatrix$region <- GRanges(countMatrix$region)
+keep <- c("BI_protac","control","region")
+filtered_atacSeqData_CvsP <- filtered_atacSeqData[,grepl(paste(keep, collapse = "|") , names(filtered_atacSeqData) )]
+
+atac_GRanges <- GRanges(filtered_atacSeqData_CvsP$region)
 
 
 ```
@@ -329,6 +333,9 @@ countMatrix$region <- GRanges(countMatrix$region)
 library(Biostrings)
 library(BSgenome.Hsapiens.UCSC.hg38)
 
+dna_sequences <- getSeq(Hsapiens, atac_GRanges)
+filtered_atacSeqData_CvsP$GC <- letterFrequency(dna_sequences, "GC", as.prob=TRUE)
+
 ```
 
 
@@ -338,10 +345,23 @@ library(BSgenome.Hsapiens.UCSC.hg38)
 ```{r}
 #please limit the y axis to between 0 and 50
 
+library(reshape2)
+library(ggplot2)
+require(mgcv)
+
+cpm_filtered_atacSeqData <- data.frame(cpm(countMatrix))
+cpm_filtered_atacSeqData$region <- filtered_atacSeqData_CvsP$region
+cpm_filtered_atacSeqData$GC <- filtered_atacSeqData_CvsP$GC
+melted_cpm_atacSeqData <- melt(cpm_filtered_atacSeqData, id.vars=c("region","GC"))
+u <- ggplot(melted_cpm_atacSeqData, aes(x=GC, y=value)) + geom_point() + ylim(0,50) + stat_smooth(method = "gam")
+u + facet_wrap(~variable)
+
 ```
 
 ### `#?#` *Repeat the above, but this time showing only the lines of best fit and all on the same plot - 2 pt*
 ```{r}
+
+
 
 ```
 
