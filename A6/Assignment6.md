@@ -165,7 +165,9 @@ accessibility”*
 atacSeqData = read.table(textConnection(readLines(gzcon(url("ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE148nnn/GSE148175/suppl/GSE148175_count_matrix_raw_atac_BRM014_ACBI1.csv.gz")))), 
                       sep=",", stringsAsFactors = FALSE, header = TRUE)
 
-#glimpse(atacSeqData) ##data.frame with 56,617 rows (coverage) and 25 columns (1 region; 24 samples)
+#NOTE: Inspection of the data.
+#glimpse(atacSeqData)
+#This is a data.frame with 56,617 rows (coverage) and 25 columns (1 region; 24 samples)
 ```
 
 ``` r
@@ -178,7 +180,9 @@ samples$treatment[samples$treatment=="N"]="BRM014"
 samples$time= as.numeric(gsub("[a-z]*","",samples$timeName))
 samples$time[grepl("min",samples$timeName)]=samples$time[grepl("min",samples$timeName)]/60
 
-#glimpse(samples) ##data.frame with 24 rows (samples) and 5 columns (ID, replicate, timeName, treatment, time)
+#NOTE: Inspection of the data.
+#glimpse(samples)
+#This is a data.frame with 24 rows (samples) and 5 columns (ID, replicate, timeName, treatment, time)
 ```
 
 # Part 1: understanding the experiment
@@ -192,7 +196,7 @@ and one on the right for the two replicates (e.g. using `facet_grid`).*
 ``` r
 #here, if the point is there, it means such a sample exists, if absent it means that there is no such sample
 
-p <- ggplot(samples, aes(x=time, y=treatment)) + geom_point()
+p <- ggplot(samples, aes(x=time, y=treatment)) + geom_point() + labs(title= "Plot of Experimental Design", y = "Treatment", x = "Time (hours)")
 p + facet_grid(cols = vars(replicate))
 ```
 
@@ -206,38 +210,16 @@ appropriate control to gauge the effect of BRM014.*
 
 \#ANSWER: No. We can only compare BRM014 to DMSO at the time points 5min
 and 24h, since there is no such DMSO sample at the remaining time points
-(i.e., 10min, 30min, 1h, and 6h). Thus, the appropriate control to gauge
-the effect of BRM014 is only present at the first and last time points.
+(i.e., 10min, 30min, 1h, and 6h). Since DMSO is the control to gauge the
+effect of BRM014 and is only present at the first and last time points,
+a comparison between the two is only appropriate at those times.
 
 ``` r
-#NOTE: We can further inspect the data.frame to verify this answer.
+#NOTE: We can further inspect the data.frame to verify this answer. These commands show that DMSO samples are only present at times 5min and 24h, while BRM014 is present at every time point (i.e., 5min, 10min, 30min, 1h, 6h, and 24h).
 
-samples[samples$treatment=="DMSO",]
+#samples[samples$treatment=="DMSO",]
+#samples[samples$treatment=="BRM014",]
 ```
-
-    ##              ID replicate timeName treatment        time
-    ## 1   R1_24h_DMSO        R1      24h      DMSO 24.00000000
-    ## 8  R1_5min_DMSO        R1     5min      DMSO  0.08333333
-    ## 13  R2_24h_DMSO        R2      24h      DMSO 24.00000000
-    ## 20 R2_5min_DMSO        R2     5min      DMSO  0.08333333
-
-``` r
-samples[samples$treatment=="BRM014",]
-```
-
-    ##            ID replicate timeName treatment        time
-    ## 2    R1_24h_N        R1      24h    BRM014 24.00000000
-    ## 3     R1_6h_N        R1       6h    BRM014  6.00000000
-    ## 4     R1_1h_N        R1       1h    BRM014  1.00000000
-    ## 5  R1_30min_N        R1    30min    BRM014  0.50000000
-    ## 6  R1_10min_N        R1    10min    BRM014  0.16666667
-    ## 7   R1_5min_N        R1     5min    BRM014  0.08333333
-    ## 14   R2_24h_N        R2      24h    BRM014 24.00000000
-    ## 15    R2_6h_N        R2       6h    BRM014  6.00000000
-    ## 16    R2_1h_N        R2       1h    BRM014  1.00000000
-    ## 17 R2_30min_N        R2    30min    BRM014  0.50000000
-    ## 18 R2_10min_N        R2    10min    BRM014  0.16666667
-    ## 19  R2_5min_N        R2     5min    BRM014  0.08333333
 
 # Part 2: QC
 
@@ -255,7 +237,7 @@ count_matrix <- atacSeqData[,2:ncol(atacSeqData)] #build a count matrix from the
 sum_matrix <- data.frame(t(colSums(count_matrix))) #sum the columns to calculate the total number of reads for every sample
 melt_matrix <- melt(sum_matrix, id.vars=c()) #melt the matrix to facilitate plotting
 
-q <- ggplot(data=melt_matrix, aes(x=variable, y=value)) + geom_bar(stat="identity") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+q <- ggplot(data=melt_matrix, aes(x=variable, y=value)) + geom_bar(stat="identity") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + labs(title= "Plot of Read Coverage per Sample", y = "Total Number of Reads", x = "Sample")
 q
 ```
 
@@ -332,7 +314,7 @@ library(dplyr)
 
 ``` r
 filters <- c('BI_protac' , 'control')
-atacSeqData_BI_protac_control <- atacSeqData[, c('region',grep(paste(filters, collapse = "|"),names(atacSeqData),value=TRUE))] #new data.frame containing only BI_protac and control samples
+atacSeqData_BI_protac_control <- atacSeqData[, c('region',grep(paste(filters, collapse = "|"),names(atacSeqData),value=TRUE))] #build a new data.frame containing only BI_protac and control samples
 ```
 
 ### `#?#` *For this subset, calculate the counts per million reads (CPM) for each sample - 2 pt*
@@ -357,7 +339,7 @@ library(reshape2)
 
 ``` r
 melt_cpm_BI_protac_control <- melt(cpm_BI_protac_control, id.vars=c())
-r <- ggplot(melt_cpm_BI_protac_control, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel density estimate for counts per million reads (CPM)", y = "Density", x = "Counts per million (CPM)", color = "Sample")
+r <- ggplot(melt_cpm_BI_protac_control, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel Density Estimate for Counts per Million Reads (CPM)", y = "Density", x = "Counts per Million (CPM)", color = "Sample")
 r
 ```
 
@@ -367,7 +349,7 @@ r
 
 ``` r
 melt_log_cpm_BI_protac_control <- mutate(melt_cpm_BI_protac_control, value = log(value+1))
-s <- ggplot(melt_log_cpm_BI_protac_control, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel density estimate for normalized counts per million reads (log(CPM+1))", y = "Density", x = "Normalized counts per million (log(CPM+1))", color = "Sample")
+s <- ggplot(melt_log_cpm_BI_protac_control, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel Density Estimate for Log-Normalized Counts per Million Reads (log(CPM+1))", y = "Density", x = "Log-Normalized Counts per Million (log(CPM+1))", color = "Sample")
 s
 ```
 
@@ -376,18 +358,18 @@ s
 ### `#?#` *Why do you think log-transforming is usually performed when looking at genomics data? What about adding 1 before log transforming? - 2 pt*
 
 \#ANSWER: In genomics data, distributions are usually highly skewed and
-heteroscedasticity results in biased statistical tests. Thus, log
-transformation can be used to approximate a normal distribution, which
-is required to meet the assumptions of certain tests, improve symmetry,
-and better accomodate orders of magnitude of differential expression.
-Furthermore, the log scale informs on relative changes, while the linear
-scale informs on absolute changes. In genetic analysis, particularly
-differential expression analysis, relative changes are often more
-interesting than absolute differences. Because the logarithm of zero,
-log(0), is udefined, adding a constant value to every data point prior
-to applying the log transform is a good practice. This is especially
-important in studies where the control group dose is set to zero and
-log(x) does not exist.
+heteroscedasticity commonly results in biased statistical tests. Thus,
+log transformation can be used to approximate a normal distribution,
+which is required to meet the assumptions of certain tests, improve
+symmetry, and better accomodate orders of magnitude of differential
+expression. Furthermore, the log scale informs on relative changes,
+while the linear scale informs on absolute changes. In genetic analysis,
+particularly differential expression or accessibility analysis, relative
+changes between conditions are often more interesting than estimating
+absolute values. Because the logarithm of zero, log(0), is udefined,
+adding a constant to every data point prior to applying the log
+transform is a good practice. This is especially important in studies
+where the control group dose is set to zero and log(x) does not exist.
 
 ### `#?#` *Some regions have very large CPMs. Inspect the peaks for which CPM&gt;400. What do you notice about them? 3 pt*
 
@@ -405,7 +387,7 @@ table(cpm_400_BI_protac_control$region)
     ##                  8                  8                  8
 
 ``` r
-#ANSWER: The peaks are located either on chr1 (11) or chrM (40), but mainly on the mitochondrial chromosome. The contamination from chrM contributes to large fraction of the unusable reads in ATAC-seq analysis, since  the mitochondrial genome is nucleosome-free and thus widely accessible to Tn5 insertion.
+#ANSWER: The peaks are located either on chr1 (11) or chrM (40), but mainly on the mitochondrial chromosome. In ATAC-seq analysis, it is common to observe this type of contamination since the mitochondrial genome is nucleosome-free and thus widely accessible to Tn5 insertion, contributing to large fraction of the unusable reads.
 ```
 
 *Normally, we would remove some of these regions before continuing (and
@@ -419,39 +401,36 @@ with each other in ways you expect.*
 ### `#?#` *Calculate the pairwise correlations between log(CPM+1)s for the samples and plot them as a heatmap (samples x samples) - 3 pt*
 
 ``` r
-#norm_cpm_df <- log( cpm_df[, -which(names(cpm_df) == "region")] + 1 )
 norm_cpm_BI_protac_control <- log( data.frame(cpm(count_matrix2)) + 1 )
 cc <- cor(norm_cpm_BI_protac_control, method = "pearson")
 melt_cc <- melt(cc)
-t <- ggplot(data = melt_cc, aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "white",aes(fill = value)) +  geom_text(aes(label = round(value, 2))) +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
-t
+t <- ggplot(data = melt_cc, aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "white",aes(fill = value)) +  geom_text(aes(label = round(value, 2))) +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) 
+t + labs(title= "Heatmap of Pairwise Correlations Between Samples", y = "Sample", x = "Sample") + scale_fill_gradient2(midpoint = 0, limit = c(-1,1), name="Pearson Correlation")
 ```
 
 ![](Assignment6_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ### `#?#` *What do you expect the correlations between replicates to look like? Is that what you see? - 2 pt*
 
-\#ANSWER: I would expect the correlation coefficient to be close to 1.0,
-at a strong but not exaclty perfect value. This would indicate a “good”
-replication with highly positive statistical relationship between
-replicates, which is in fact observed in the heatmap. The correlation
-between replicates ranges from 0.86 to 0.89.
+\#ANSWER: I would expect to observe a correlation between technical
+replicates (e.g., R1\_24h\_control and R2\_24h\_control), as well as
+biological replicates (e.g., R1\_24h\_control and R1\_24h\_BI\_protac).
+These two factors would suggest a reproducible, or at least internally
+consistent, replication with highly positive statistical relationship
+between replicates. This is in fact observed in the heatmap, where the
+correlation coefficients range from 0.8 to 0.91 between replicates of
+the same sample, from 0.83-0.85 between samples of R1, and from
+0.86-0.90 between samples of R2. There is a possible outlier pair in the
+R2 replicates, namely R2\_24h\_BI\_protac and R2\_24h\_control, which
+have a correlation coefficient of 0.81.
 
 ``` r
-#NOTE: We can further inspect the r values for the correlation between replicates.
-
-filter(melt_cc, substring(melt_cc$Var1,3)==substring(melt_cc$Var2,3) & melt_cc$Var1 != melt_cc$Var2)
+#NOTE: We can further inspect the correlation coefficients.
+#Correlation coefficients between replicates of the same sample:
+#filter(melt_cc, substring(melt_cc$Var1,3)==substring(melt_cc$Var2,3) & melt_cc$Var1 != melt_cc$Var2)
+#Correlation coefficients between samples of the same replicate:
+#filter(melt_cc, substr(melt_cc$Var1,0,3)==substr(melt_cc$Var2,0,3) & melt_cc$Var1 != melt_cc$Var2)
 ```
-
-    ##               Var1             Var2     value
-    ## 1   R2_24h_control   R1_24h_control 0.8803564
-    ## 2 R2_24h_BI_protac R1_24h_BI_protac 0.8946036
-    ## 3  R2_6h_BI_protac  R1_6h_BI_protac 0.8909929
-    ## 4    R2_6h_control    R1_6h_control 0.8653084
-    ## 5   R1_24h_control   R2_24h_control 0.8803564
-    ## 6 R1_24h_BI_protac R2_24h_BI_protac 0.8946036
-    ## 7  R1_6h_BI_protac  R2_6h_BI_protac 0.8909929
-    ## 8    R1_6h_control    R2_6h_control 0.8653084
 
 *It is common to exclude some regions from analysis. For instance, we
 won’t be able to robustly identify those that are differential but have
@@ -464,7 +443,7 @@ contaminant of ATAC-seq data.*
 ``` r
 filtered_atacSeqData <- atacSeqData_BI_protac_control[rowSums(atacSeqData_BI_protac_control < 10)==0, , drop = FALSE]
 filtered_atacSeqData <- filtered_atacSeqData[!grepl("chrM",filtered_atacSeqData$region),]
-#this data.frame contains only BI_protac and control samples and non-mitochondrial regions with average counts greater than 10
+#this filtered data.frame contains only BI_protac and control samples and non-mitochondrial regions with average counts greater than 10
 ```
 
 ### `#?#` *How many peaks did you have before? How many do you have now? - 1 pt*
@@ -511,15 +490,15 @@ will need to understand what the steps do, so read the appropriate
 documentation. *
 
 ``` r
-curSamples = samples[match(names(countMatrix), samples$ID),];
-y = DGEList(counts=countMatrix, group=curSamples$treatment)
-y = calcNormFactors(y)
-designPaired = model.matrix(~curSamples$treatment + curSamples$timeName)  
+curSamples = samples[match(names(countMatrix), samples$ID),]; #data.frame with current samples, including BI_protac or control and 6h or 24hrs
+y = DGEList(counts=countMatrix, group=curSamples$treatment) #DEGList object made from the table of counts, utilizing a grouping factor that identifies the group membership of each sample based on treatment
+y = calcNormFactors(y) #calculate TMM normalization factors
+designPaired = model.matrix(~curSamples$treatment + curSamples$timeName) #build a design matrix that accounts for batch effects
 # we are using timeName here to make sure that time is treated as a categorical variable. Had we more time points it might make sense to treat time as a value.
-y = estimateDisp(y, designPaired)
+y = estimateDisp(y, designPaired) #calculate a common dispersion for all the tags, trended dispersion depending on the tag abundance, or separate dispersions for individual tags given a table of counts or a DGEList objects 
 fitPaired = glmQLFit(y, designPaired)
-qlfPairedTime6vs24 = glmQLFTest(fitPaired, coef=3) 
-qlfPairedTreatControlvsProtac = glmQLFTest(fitPaired, coef=2)
+qlfPairedTime6vs24 = glmQLFTest(fitPaired, coef=3) #compare 3 (timeName6h) vs. 1
+qlfPairedTreatControlvsProtac = glmQLFTest(fitPaired, coef=2) #compare 2 (treatmentcontrol) vs. 1
 
 allDEStatsPairedTreatControlvsProtac = as.data.frame(topTags(qlfPairedTreatControlvsProtac,n=nrow(countMatrix)))
 allDEStatsPairedTreatControlvsProtac$region=row.names(allDEStatsPairedTreatControlvsProtac)
@@ -536,7 +515,15 @@ line y=0.*
 ### `#?#` *Make an MA plot for allDEStatsPairedTreatControlvsProtac -2pt*
 
 ``` r
-de <- decideTestsDGE(qlfPairedTreatControlvsProtac, p=0.05, adjust='BH')
+#Get significantly DA regions:
+#summary(decideTests(qlfPairedTreatControlvsProtac))
+
+#Plot option 1, without Lowess line:
+#plotMD(qlfPairedTreatControlvsProtac)
+#abline(h = 0, col = 'blue')
+
+#Plot option 2, with Lowess line:
+de <- decideTests(qlfPairedTreatControlvsProtac)
 detags <- rownames(qlfPairedTreatControlvsProtac)[as.logical(de)]
 plotSmear(qlfPairedTreatControlvsProtac, de.tags=detags, main='MA Plot for allDEStatsPairedTreatControlvsProtac', lowess=TRUE)
 abline(h = 0, col = 'blue')
@@ -547,7 +534,7 @@ abline(h = 0, col = 'blue')
 ### `#?#` *Make an MA plot for allDEStatsPairedTime6vs24 - 1 pt*
 
 ``` r
-de2 <- decideTestsDGE(qlfPairedTime6vs24, p=0.05, adjust='BH')
+de2 <- decideTests(qlfPairedTime6vs24)
 detags2 <- rownames(qlfPairedTime6vs24)[as.logical(de)]
 plotSmear(qlfPairedTime6vs24, de.tags=detags, main='MA Plot for allDEStatsPairedTime6vs24', lowess=TRUE)
 abline(h = 0, col = 'blue')
@@ -699,42 +686,42 @@ qlfPairedTreatControlvsProtac_loess <- glmQLFTest(fitPaired_loess, coef=2)
 ### `#?#` *Make the same two MA plots as before, but this time using the loess normalized analysis - 1 pt*
 
 ``` r
-de3 <- decideTestsDGE(qlfPairedTreatControlvsProtac_loess, p=0.05, adjust='BH')
+de3 <- decideTests(qlfPairedTreatControlvsProtac_loess)
 detags3 <- rownames(qlfPairedTreatControlvsProtac_loess)[as.logical(de)]
-plotSmear(qlfPairedTreatControlvsProtac_loess, de.tags=detags, main='MA Plot for loess-normalized allDEStatsPairedTreatControlvsProtac', lowess=TRUE)
+plotSmear(qlfPairedTreatControlvsProtac_loess, de.tags=detags, main='MA Plot for Loess-Normalized allDEStatsPairedTreatControlvsProtac', lowess=TRUE)
 abline(h = 0, col = 'blue')
 ```
 
 ![](Assignment6_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 ``` r
-de4 <- decideTestsDGE(qlfPairedTime6vs24_loess, p=0.05, adjust='BH')
+de4 <- decideTests(qlfPairedTime6vs24_loess)
 detags4 <- rownames(qlfPairedTime6vs24_loess)[as.logical(de)]
-plotSmear(qlfPairedTime6vs24_loess, de.tags=detags, main='MA Plot for loess-normalized allDEStatsPairedTime6vs24', lowess=TRUE)
+plotSmear(qlfPairedTime6vs24_loess, de.tags=detags, main='MA Plot for Loess-Normalized allDEStatsPairedTime6vs24', lowess=TRUE)
 abline(h = 0, col = 'blue')
 ```
 
 ![](Assignment6_files/figure-gfm/unnamed-chunk-24-2.png)<!-- -->
 
-``` r
-#plotMD(qlfPairedTreatControlvsProtac_loess,)
-```
-
 ### `#?#` *What was the first normalization method? What changed in the MA plots? Which analysis do you think is more reliable and why? - 4 pt*
 
-\#ANSWER: The first normalization method was TMM, which utilizes scaling
-factors based on the weighted trimmed mean of M-values to convert raw
-library sizes into effective library sizes. The differences between TMM
-and loess normlization are most noticeable in the shape of the loess
-lines, especially between the “TreatControlvsProtac” plots. Since this
-line visually indicates the amount of bias in differential accessibility
-with a fixed threshold (M=1 or M=-1), a more reliable analysis is
-achieved when it is horizontal at M=0. Furthermore, the TMM
-normalization method assumes that most regions of the genome are not
-truly differentially accessible, and should be applied when signal
-differences are most likely to be caused by technical artifacts or
-systematic biases in library ATAC distribution (e.g., mapping errors,
-PCR duplicates).
+\#ANSWER: The first normalization method was performed by edgeR’s
+calcNormFactors() function, which utilizes scaling factors based on the
+weighted trimmed mean of M-values (TMM) to convert raw library sizes
+into effective library sizes. Changes in the MA plots are particularly
+noticeable for the in the allDEStatsPairedTreatControlvsProtac dataset,
+where differences in the curvature of the loess line suggest that loess
+normalization is preferable over the TMM approach. This occurs because
+the loess line visually indicates the amount of bias in differential
+accessibility with a fixed threshold (M=1 or M=-1), thus a more reliable
+analysis is achieved when it is horizontal at M=0 as observed in the
+loess-normalized data. Furthermore, TMM normalization assumes that most
+regions of the genome are not truly differentially accessible and that
+signal differences arise from technical artifacts or systematic biases
+in library ATAC distribution, but this guaranteee cannot be made due to
+the possible biological effects of treatment drugs on chromatin
+accessibility. Lastly, loess normalization also addresses trended bias
+in addition to efficiency bias.
 
 # Part 4: GC bias
 
@@ -790,8 +777,6 @@ content for each of the samples.*
 ``` r
 #please limit the y axis to between 0 and 50
 
-library(reshape2)
-library(ggplot2)
 require(mgcv)
 ```
 
@@ -822,7 +807,7 @@ cpm_filtered_atacSeqData$region <- filtered_atacSeqData$region
 cpm_filtered_atacSeqData$GC <- filtered_atacSeqData$GC
 melt_cpm_atacSeqData <- melt(cpm_filtered_atacSeqData, id.vars=c("region","GC"))
 u <- ggplot(melt_cpm_atacSeqData, aes(x=GC, y=value)) + geom_point() + ylim(0,50) + stat_smooth(method = "gam")
-u + facet_wrap(~variable)
+u + facet_wrap(~variable) + labs(title= "Relationship Between Peak CPM and GC Content", y = "CPM", x = "GC Content")
 ```
 
     ## `geom_smooth()` using formula 'y ~ s(x, bs = "cs")'
@@ -836,7 +821,6 @@ u + facet_wrap(~variable)
 ### `#?#` *Repeat the above, but this time showing only the lines of best fit and all on the same plot - 2 pt*
 
 ``` r
-library(ggplot2)
 require(mgcv)
 
 v <- ggplot(melt_cpm_atacSeqData, aes(x=GC, y=value, col = factor(variable))) + ylim(0,50) + stat_smooth(method = "gam")
@@ -851,14 +835,23 @@ v + labs(title= "GC Content vs. CPM for Peaks", y = "CPM", x = "GC Content", col
 
 ### `#?#` *Given this result, predict whether we will see a significant relationship between GC content and logFC in our differential peak analysis (loess-normalized). Justify your prediction. Predicting “wrong” will not be penalized, as long as your justification is correct. Don’t retroactively change your answer. - 2 pt*
 
-\#ANSWER: In regions of low (&lt;0.5) or high (&gt;0.7) GC content,
-noticeable variations in CPM are observed for the peaks in each sample.
-However, regions of moderate (0.5-0.6) GC content have a consistent CPM
-across all samples. Thus, I believe that there will be a significant
-relationship between GC content and logFC in our loess-normalized
-Differential accessibility analysis, since the plot above demonstrates a
-sample-specific relationship between the number of reads and the
-abundance of GC nucleotides in any given peak.
+\#ANSWER: In regions of low (&lt;0.4) or high (&gt;0.7) GC content,
+slight differences are observed in the CPM of each sample. However,
+regions of moderate (0.5-0.6) GC content have a consistent CPM across
+all samples. Since GC content is a fixed property of the genome
+sequence, we should in fact expect to see a similar GC content
+distribution. The slight sample-specific variations must therefore be
+driven by either technical bias or biological conditions. Sources of
+bias such as enzymatic cleavage and PCR amplification have a preference
+towards GC-rich regions, but read count normalization using the loess
+approach which removes local extremes caused by insufficient coverage
+for some percentual GC content. Thus, I believe that there will not be a
+significant relationship between GC content and logFC in our
+loess-normalized differential accessibility analysis. This hypothesis is
+based on the assumption that the differences observed between samples is
+not due to biology (e.g., effects of treatment time or drug on
+differential accessibility), but rather a result of differences in
+experimental conditions.
 
 ### `#?#` *Plot the relationship between GC and logFC for the loess-normalized ControlvsProtac analysis. Also include a line of best fit (blue) and y=0 (red) - 2 pt*
 
@@ -889,14 +882,14 @@ x + labs(title= "GC Content vs. logFC for Non Loess-Nornmalized Peaks", y = "log
 
 ### `#?#` *Was your prediction correct? Do you think we should also account for GC normalization in our differential ATAC analysis? Why/why not? - 3 pt*
 
-\#ANSWER: Yes, my prediction was correct and as mentioned before,
-regions with very low or very high GC content seem to be more greatly
-affected. I believe that we should apply GC normalization to account for
-GC-content effects in ATAC-seq analysis because differential
-accessibility can be affected by sample-specific technical artifacts
-such as enzymatic cleavage effects, PCR bias, and duplicate reads. These
-factors have a dowstream impact on the GC content of a sample and bias
-ATAC analyses, which are largely based on logFC metrics.
+\#ANSWER: Yes, my prediction was correct and a similar pattern is once
+again observed in regions with very low or very high GC content. I
+believe that we do not need to apply GC normalization to account for
+GC-content effects in ATAC-seq analysis because loess normalization
+corrects sample-specific technical artifacts such as enzymatic cleavage
+effects, PCR bias, and duplicate reads. These factors are all related to
+GC content and can bias ATAC analyses, which are largely based on logFC
+metrics.
 
 *We will leave GC normalization as an optional exercise, and will not
 actually do it here.*
@@ -917,38 +910,19 @@ normalized**)*
 
 ### `#?#` *Now considering the two comparisons (6 vs 24 hours, and protac vs control). EdgeR performed a correction for MHT, but if we want to analyze the results from both comparisons, do we need to re-adjust to account for the fact that we tested two different hypothesis sets (time and treatment)? Why/not? - 2 pt*
 
-\#ANSWER: \#because the glm approach allows an infinite variety of
-contrasts to be tested between the groups, so long as we form and test
-these contrasts appropriately. Thus, we must utilize nested interaction
-formulas to build a design matrix with enough contrasts to be able to
-compare (6 AND protac) vs. (24 AND protac) vs. (6 AND control) vs. (24
-AND control). This way, we can consider all the levels of time for each
-treatment drug separately and analyze them to identify the peaks that
-are significantly differentially accessible for all four contrasts.
+\#ANSWER: Yes, we would need to re-adjust the design to account for the
+fact that different combinations of experimental conditions can have a
+unique effect. Therefore, we must setup a new design matrix that
+considers all the levels of treatment time for each treatment drug. In
+comparison to the original design matrix (designPaired), which was
+formed from an additive model formula without an interaction term, the
+new matrix should be built by combining all the experimental factors
+into a single factor that is defined as a group or by utilizing nested
+interaction formulas. Nonetheless, we must still account for the batch
+effect observed from the MDS plot, in addition to the treatment effects
+over all times.
 
 ### `#?#` *How many differential peaks did you find (FDR&lt;0.01). - 1 pt*
-
-``` r
-y2 = DGEList(counts=countMatrix, group=curSamples$treatment)
-y2 = calcNormFactors(y2)
-design2 <- model.matrix(~curSamples$treatment + curSamples$treatment:curSamples$timeName)
-y2 = estimateDisp(y2, design2)
-fit <- glmQLFit(y2, design2)
-
-qlfPairedAll <- glmQLFTest(fitPaired, contrast=c(0,-1,1))
-allDEStatsPairedAll = as.data.frame(topTags(qlfPairedAll,n=nrow(countMatrix)))
-allDEStatsPairedAll$region=row.names(allDEStatsPairedAll)
-
-nrow(allDEStatsPairedAll[allDEStatsPairedAll$FDR<0.01, ])
-```
-
-    ## [1] 43
-
-``` r
-nrow(allDEStatsPairedTime6vs24[allDEStatsPairedTime6vs24$FDR<0.01, ])
-```
-
-    ## [1] 1
 
 ``` r
 nrow(allDEStatsPairedTreatControlvsProtac[allDEStatsPairedTreatControlvsProtac$FDR<0.01, ])
@@ -988,15 +962,17 @@ a + labs(title= "Plot of logCPM vs -log10(PValue) for allDEStatsPairedTreatContr
 
 \#ANSWER: Yes, regions that have very low counts across all the
 libraries should be removed prior to downstream analysis. From a
-biological perspective, a region must be accessible at some minimal
-level to constitute biologically relevant open chromatin, such as
-transcription factor binding sites or DNA methylation sites. From a
-statistical point of view, regions with consistently low counts cannot
-be accurately or reliably identified as significantly differentially
-accessible due to the lack of statistical evidence. However, I would
-recommend filtering on a count-per-million (CPM) basis rather than
-absolute counts, as to avoid favoring regions that are accessible in
-larger libraries over those in smaller libraries.
+biological perspective, this is because a region must be accessible at
+some minimal level to comprise biologically relevant open chromatin,
+such as transcription factor binding sites or DNA methylation sites.
+From a statistical point of view, regions with consistently low counts
+cannot be reliably identified as significantly differentially accessible
+because they lacks enough statistical evidence against the null
+hypothesis to obtain sufficiently low p-values. Lastly, some statistical
+approximations, as well as modelling and hypothesis testing, fail at low
+counts. However, I would suggest filtering on a count-per-million (CPM)
+basis rather than absolute counts, as to avoid favoring regions that are
+accessible in larger libraries over those in smaller libraries.
 
 *At this point there are many other follow ups you can and would do for
 a real differential analysis, but we leave these as optional exercises.
