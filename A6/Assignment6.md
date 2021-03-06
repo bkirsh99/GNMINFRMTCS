@@ -209,10 +209,11 @@ appropriate control to gauge the effect of BRM014.*
 ### `#?#` *Can we compare BRM014 to DMSO across all time points? Why/why not? - 1 pt*
 
 \#ANSWER: No. We can only compare BRM014 to DMSO at the time points 5min
-and 24h, since there is no such DMSO sample at the remaining time points
-(i.e., 10min, 30min, 1h, and 6h). Since DMSO is the control to gauge the
-effect of BRM014 and is only present at the first and last time points,
-a comparison between the two is only appropriate at those times.
+and 24h since there is no such DMSO sample at the remaining time points
+(i.e., 10min, 30min, 1h, and 6h). Thus, the possibility of utilizing
+DMSO as a vehicle-only control to confidently affirm that any observed
+effects are due to the drug alone and not the solventis is only existent
+at the first and last time points.
 
 ``` r
 #NOTE: We can further inspect the data.frame to verify this answer. These commands show that DMSO samples are only present at times 5min and 24h, while BRM014 is present at every time point (i.e., 5min, 10min, 30min, 1h, 6h, and 24h).
@@ -412,23 +413,26 @@ t + labs(title= "Heatmap of Pairwise Correlations Between Samples", y = "Sample"
 
 ### `#?#` *What do you expect the correlations between replicates to look like? Is that what you see? - 2 pt*
 
-\#ANSWER: I would expect to observe a correlation between technical
-replicates (e.g., R1\_24h\_control and R2\_24h\_control), as well as
-biological replicates (e.g., R1\_24h\_control and R1\_24h\_BI\_protac).
-These two factors would suggest a reproducible, or at least internally
-consistent, replication with highly positive statistical relationship
-between replicates. This is in fact observed in the heatmap, where the
-correlation coefficients range from 0.8 to 0.91 between replicates of
-the same sample, from 0.83-0.85 between samples of R1, and from
-0.86-0.90 between samples of R2. There is a possible outlier pair in the
-R2 replicates, namely R2\_24h\_BI\_protac and R2\_24h\_control, which
-have a correlation coefficient of 0.81.
+\#ANSWER: I would expect two biological independent replicates to show
+very high correlations. This is because repeated measurements of the
+same sample reflect sources of variability between and, potentially,
+within runs, as technical replication identifies measurement errors or
+noise caused by the equipment or protocol. Thus, for a well-replicable
+and repeatable experiment, I would expect the variance of measurements
+within each replicate group to be similar between groups. Indeed, this
+is attested by the heatmap, where the correlation coefficients fall in
+the range of 0.83-0.85 between technical samples from R1 and 0.86-0.90
+between technical samples from R2. Note that there is a possible outlier
+pair in the R2 replicates, namely R2\_24h\_BI\_protac and
+R2\_24h\_control, which have a correlation coefficient of 0.81.
+Nonetheless, the general trend suggests a strong correlation between
+replicates and internally consistent replication.
 
 ``` r
 #NOTE: We can further inspect the correlation coefficients.
 #Correlation coefficients between replicates of the same sample:
 #filter(melt_cc, substring(melt_cc$Var1,3)==substring(melt_cc$Var2,3) & melt_cc$Var1 != melt_cc$Var2)
-#Correlation coefficients between samples of the same replicate:
+#Correlation coefficients between samples of the same group:
 #filter(melt_cc, substr(melt_cc$Var1,0,3)==substr(melt_cc$Var2,0,3) & melt_cc$Var1 != melt_cc$Var2)
 ```
 
@@ -441,7 +445,7 @@ contaminant of ATAC-seq data.*
 ### `#?#` *Filter your data, retaining only regions where the average counts per sample is greater than 10, and also remove mitochondrial regions - 3 pt*
 
 ``` r
-filtered_atacSeqData <- atacSeqData_BI_protac_control[rowSums(atacSeqData_BI_protac_control < 10)==0, , drop = FALSE]
+filtered_atacSeqData <- atacSeqData_BI_protac_control[rowMeans(atacSeqData_BI_protac_control < 10)==0, , drop = FALSE]
 filtered_atacSeqData <- filtered_atacSeqData[!grepl("chrM",filtered_atacSeqData$region),]
 #this filtered data.frame contains only BI_protac and control samples and non-mitochondrial regions with average counts greater than 10
 ```
@@ -708,20 +712,22 @@ abline(h = 0, col = 'blue')
 \#ANSWER: The first normalization method was performed by edgeR’s
 calcNormFactors() function, which utilizes scaling factors based on the
 weighted trimmed mean of M-values (TMM) to convert raw library sizes
-into effective library sizes. Changes in the MA plots are particularly
-noticeable for the in the allDEStatsPairedTreatControlvsProtac dataset,
-where differences in the curvature of the loess line suggest that loess
-normalization is preferable over the TMM approach. This occurs because
-the loess line visually indicates the amount of bias in differential
-accessibility with a fixed threshold (M=1 or M=-1), thus a more reliable
-analysis is achieved when it is horizontal at M=0 as observed in the
-loess-normalized data. Furthermore, TMM normalization assumes that most
-regions of the genome are not truly differentially accessible and that
-signal differences arise from technical artifacts or systematic biases
-in library ATAC distribution, but this guaranteee cannot be made due to
-the possible biological effects of treatment drugs on chromatin
-accessibility. Lastly, loess normalization also addresses trended bias
-in addition to efficiency bias.
+into effective library sizes. In the MA plots, noticeable discrepancies
+in the number of differentially accessible regions (i.e., red points)
+cannot be observed. However, changes in the curvature of the loess lines
+are particularly noticeable for the allDEStatsPairedTreatControlvsProtac
+dataset, where it suggests that loess normalization is preferable over
+the TMM approach. This occurs because the loess line visually indicates
+the amount of bias in differential accessibility with a fixed threshold
+(M=1 or M=-1), thus a more reliable analysis is achieved when it is
+horizontal at M=0 as observed in the loess-normalized data. Furthermore,
+TMM normalization assumes that most regions of the genome are not truly
+differentially accessible and that signal differences arise from
+technical artifacts or systematic biases in library ATAC distribution,
+but this guaranteee cannot be made for this analysis due to the possible
+biological effects of treatment drugs on chromatin accessibility.
+Lastly, loess normalization also addresses trended bias in addition to
+efficiency bias, so it is a more suitable normalization method.
 
 # Part 4: GC bias
 
@@ -824,7 +830,7 @@ u + facet_wrap(~variable) + labs(title= "Relationship Between Peak CPM and GC Co
 require(mgcv)
 
 v <- ggplot(melt_cpm_atacSeqData, aes(x=GC, y=value, col = factor(variable))) + ylim(0,50) + stat_smooth(method = "gam")
-v + labs(title= "GC Content vs. CPM for Peaks", y = "CPM", x = "GC Content", color = "Sample")
+v + labs(title= "GC Content vs. CPM per Sample", y = "CPM", x = "GC Content", color = "Sample")
 ```
 
     ## `geom_smooth()` using formula 'y ~ s(x, bs = "cs")'
@@ -844,8 +850,8 @@ distribution. The slight sample-specific variations must therefore be
 driven by either technical bias or biological conditions. Sources of
 bias such as enzymatic cleavage and PCR amplification have a preference
 towards GC-rich regions, but read count normalization using the loess
-approach which removes local extremes caused by insufficient coverage
-for some percentual GC content. Thus, I believe that there will not be a
+approach removes local extremes caused by insufficient coverage for some
+percentual GC content. Thus, I believe that there will not be a
 significant relationship between GC content and logFC in our
 loess-normalized differential accessibility analysis. This hypothesis is
 based on the assumption that the differences observed between samples is
@@ -858,8 +864,11 @@ experimental conditions.
 ``` r
 allDEStatsPairedTreatControlvsProtac_loess <- as.data.frame(topTags(qlfPairedTreatControlvsProtac_loess,n=nrow(countMatrix)))
 filtered_atacSeqData$logFC <- allDEStatsPairedTreatControlvsProtac_loess$logFC[match(row.names(allDEStatsPairedTreatControlvsProtac_loess),row.names(filtered_atacSeqData))]
-melt_loess_atacSeqData <- melt(filtered_atacSeqData, id.vars=c("region","GC","logFC"))
-w <- ggplot(melt_loess_atacSeqData, aes(x=GC, y=logFC)) + stat_smooth(method = "gam") + geom_hline(yintercept=0, color = "red")
+filtered_atacSeqData$logFC_null <- allDEStatsPairedTreatControlvsProtac$logFC[match(row.names(allDEStatsPairedTreatControlvsProtac),row.names(filtered_atacSeqData))]
+
+melt_atacSeqData <- melt(filtered_atacSeqData, id.vars=c("region","GC","logFC","logFC_null"))
+
+w <- ggplot(melt_atacSeqData, aes(x=GC, y=logFC)) + stat_smooth(method = "gam") + geom_hline(yintercept=0, color = "red")
 w + labs(title= "GC Content vs. logFC for Loess-Nornmalized Peaks", y = "logFC", x = "GC Content")
 ```
 
@@ -870,9 +879,7 @@ w + labs(title= "GC Content vs. logFC for Loess-Nornmalized Peaks", y = "logFC",
 ### `#?#` *Now plot the same thing for the NON loess-normalized ControlvsProtac analysis. - 1 pt*
 
 ``` r
-filtered_atacSeqData$logFC_null <- allDEStatsPairedTreatControlvsProtac$logFC[match(row.names(allDEStatsPairedTreatControlvsProtac),row.names(filtered_atacSeqData))]
-melt_atacSeqData_null <- melt(filtered_atacSeqData, id.vars=c("region","GC","logFC_null"))
-x <- ggplot(melt_atacSeqData_null, aes(x=GC, y=logFC_null)) + stat_smooth(method = "gam") + geom_hline(yintercept=0, color = "red")
+x <- ggplot(melt_atacSeqData, aes(x=GC, y=logFC_null)) + stat_smooth(method = "gam") + geom_hline(yintercept=0, color = "red")
 x + labs(title= "GC Content vs. logFC for Non Loess-Nornmalized Peaks", y = "logFC", x = "GC Content")
 ```
 
@@ -883,13 +890,19 @@ x + labs(title= "GC Content vs. logFC for Non Loess-Nornmalized Peaks", y = "log
 ### `#?#` *Was your prediction correct? Do you think we should also account for GC normalization in our differential ATAC analysis? Why/why not? - 3 pt*
 
 \#ANSWER: Yes, my prediction was correct and a similar pattern is once
-again observed in regions with very low or very high GC content. I
-believe that we do not need to apply GC normalization to account for
-GC-content effects in ATAC-seq analysis because loess normalization
-corrects sample-specific technical artifacts such as enzymatic cleavage
-effects, PCR bias, and duplicate reads. These factors are all related to
-GC content and can bias ATAC analyses, which are largely based on logFC
-metrics.
+again observed in regions with very low or very high GC content, where
+logFC appears to vary the most. I believe that we do not need to apply
+GC normalization to account for GC-content effects in this specific
+ATAC-seq analysis because any GC bias is consistent across all libraries
+and will thus cancel out. Furthermore, loess normalization helps in
+correcting sample-specific technical artifacts such as enzymatic
+cleavage effects, PCR bias, and duplicate reads. These factors are all
+related to GC content and can bias ATAC analysis, which is largely based
+on logFC metrics. However, in ATAC-seq analyses where the pctGC
+vs. logFC varies more prominantly between samples, a combination of
+normalization factors (e.g., TMM or loess approach in addition to a
+peak-based GC bias estimate that is calculated separately for each
+sample) should be applied.
 
 *We will leave GC normalization as an optional exercise, and will not
 actually do it here.*
@@ -913,14 +926,27 @@ normalized**)*
 \#ANSWER: Yes, we would need to re-adjust the design to account for the
 fact that different combinations of experimental conditions can have a
 unique effect. Therefore, we must setup a new design matrix that
-considers all the levels of treatment time for each treatment drug. In
-comparison to the original design matrix (designPaired), which was
+considers all the levels of treatment time for each treatment drug
+(i.e., set up an experiment with all combinations of multiple factors).
+In comparison to the original design matrix (designPaired), which was
 formed from an additive model formula without an interaction term, the
 new matrix should be built by combining all the experimental factors
 into a single factor that is defined as a group or by utilizing nested
 interaction formulas. Nonetheless, we must still account for the batch
 effect observed from the MDS plot, in addition to the treatment effects
-over all times.
+over all times. Example of this can be found in section 3.3 of edgeR’s
+user guide, inlcuding:
+
+``` r
+#y = DGEList(counts=countMatrix, group=curSamples$treatment) 
+#y = calcNormFactors(y)
+#design = model.matrix(~curSamples$treatment * curSamples$timeName)
+#y = estimateDisp(y, design)
+#fit = glmQLFit(y, design)
+#qlf = glmQLFTest(fit, coef=2)
+#qlf = glmQLFTest(fit, coef=3)
+#qlf = glmQLFTest(fit, coef=4)
+```
 
 ### `#?#` *How many differential peaks did you find (FDR&lt;0.01). - 1 pt*
 
@@ -947,7 +973,7 @@ z <- ggplot(allDEStatsPairedTreatControlvsProtac, aes(x=logFC, y=-log10(PValue),
 z + labs(title= "Volcano Plot of allDEStatsPairedTreatControlvsProtac", color = "Significance")
 ```
 
-![](Assignment6_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+![](Assignment6_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
 
 ### `#?#` *Plot the logCPM (x axis) by -log10(Pvalue) (y axis), again colouring by FDR&lt;0.01. - 2 pt*
 
@@ -956,7 +982,7 @@ a <- ggplot(allDEStatsPairedTreatControlvsProtac, aes(x=logCPM, y=-log10(PValue)
 a + labs(title= "Plot of logCPM vs -log10(PValue) for allDEStatsPairedTreatControlvsProtac", color = "Significance")
 ```
 
-![](Assignment6_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+![](Assignment6_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
 
 ### `#?#` *Do you think our initial filtering on peaks with at least 10 reads on average per sample was a good choice? Why or why not?*
 
