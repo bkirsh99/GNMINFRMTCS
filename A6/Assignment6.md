@@ -167,7 +167,7 @@ atacSeqData = read.table(textConnection(readLines(gzcon(url("ftp://ftp.ncbi.nlm.
 
 #NOTE: Inspection of the data.
 #glimpse(atacSeqData)
-#This is a data.frame with 56,617 rows (coverage) and 25 columns (1 region; 24 samples)
+#This is a data.frame with 56,617 rows (read counts) and 25 columns (region, libraries)
 ```
 
 ``` r
@@ -182,7 +182,7 @@ samples$time[grepl("min",samples$timeName)]=samples$time[grepl("min",samples$tim
 
 #NOTE: Inspection of the data.
 #glimpse(samples)
-#This is a data.frame with 24 rows (samples) and 5 columns (ID, replicate, timeName, treatment, time)
+#This is a data.frame with 24 rows (libraries) and 5 columns (ID, replicate, timeName, treatment, time)
 ```
 
 # Part 1: understanding the experiment
@@ -349,8 +349,12 @@ r
 ### `#?#` *Plot the kernel density estimate for log(CPM+1) (x axis), coloured as before - 1 pt*
 
 ``` r
-melt_log_cpm_BI_protac_control <- mutate(melt_cpm_BI_protac_control, value = log(value+1))
-s <- ggplot(melt_log_cpm_BI_protac_control, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel Density Estimate for Log-Normalized Counts per Million Reads (log(CPM+1))", y = "Density", x = "Log-Normalized Counts per Million (log(CPM+1))", color = "Sample")
+cpm_BI_protac_control2 <- data.frame(cpm(count_matrix2,log=TRUE,prior.count=1))
+melt_log_cpm_BI_protac_control <- melt(cpm_BI_protac_control2, id.vars=c())
+melt_log_cpm_BI_protac_control2 <- mutate(melt_cpm_BI_protac_control, value = log(value+1))
+#After inspecting the two data frames (melt_log_cpm_BI_protac_control and melt_log_cpm_BI_protac_control2), I realized that a prior.count of 1 and the addition of 1 to the calculated cpm are not equivalent. Thus, the second option is used.
+
+s <- ggplot(melt_log_cpm_BI_protac_control2, aes(x=value, color=variable)) + geom_density() + labs(title= "Kernel Density Estimate for Log-Normalized Counts per Million Reads (log(CPM+1))", y = "Density", x = "Log-Normalized Counts per Million (log(CPM+1))", color = "Sample")
 s
 ```
 
@@ -358,19 +362,23 @@ s
 
 ### `#?#` *Why do you think log-transforming is usually performed when looking at genomics data? What about adding 1 before log transforming? - 2 pt*
 
-\#ANSWER: In genomics data, distributions are usually highly skewed and
-heteroscedasticity commonly results in biased statistical tests. Thus,
-log transformation can be used to approximate a normal distribution,
-which is required to meet the assumptions of certain tests, improve
-symmetry, and better accomodate orders of magnitude of differential
-expression. Furthermore, the log scale informs on relative changes,
+\#ANSWER: In genomics data, particularly epigenomic assays such as
+ATAC-seq, a small number of counts is usually observed in a large
+proportion of elements and a long right tail emerges due to the lack of
+upper limits for expression or accessibility levels. This results in
+highly skewed distributions and biased statistical tests. Thus, log
+transformation can be used to approximate a normal distribution, which
+is required to meet the assumptions of certain tests, improve symmetry,
+and better accomodate orders of magnitude of differential expression or
+accessibility. Furthermore, the log scale informs on relative changes,
 while the linear scale informs on absolute changes. In genetic analysis,
 particularly differential expression or accessibility analysis, relative
-changes between conditions are often more interesting than estimating
-absolute values. Because the logarithm of zero, log(0), is udefined,
-adding a constant to every data point prior to applying the log
-transform is a good practice. This is especially important in studies
-where the control group dose is set to zero and log(x) does not exist.
+changes between conditions are often more interesting than interpreting
+absolute values. Because the logarithm of zero is udefined, adding a
+constant to every data point prior to applying the log transform is a
+good practice to avoid missing values when computing logarithms. This is
+especially important in studies where the control group dose is set to
+zero and log(x) does not exist.
 
 ### `#?#` *Some regions have very large CPMs. Inspect the peaks for which CPM&gt;400. What do you notice about them? 3 pt*
 
@@ -402,37 +410,63 @@ with each other in ways you expect.*
 ### `#?#` *Calculate the pairwise correlations between log(CPM+1)s for the samples and plot them as a heatmap (samples x samples) - 3 pt*
 
 ``` r
-norm_cpm_BI_protac_control <- log( data.frame(cpm(count_matrix2)) + 1 )
+norm_cpm_BI_protac_control <- log(data.frame(cpm(count_matrix2)) + 1)
 cc <- cor(norm_cpm_BI_protac_control, method = "pearson")
-melt_cc <- melt(cc)
+#melt_cc <- data.frame(Var=t(combn(colnames(cc),2)),Val=cc[lower.tri(cc)])
+melt_cc <- melt(cc, varnames=c("Var1","Var2"))
 t <- ggplot(data = melt_cc, aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "white",aes(fill = value)) +  geom_text(aes(label = round(value, 2))) +  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) 
 t + labs(title= "Heatmap of Pairwise Correlations Between Samples", y = "Sample", x = "Sample") + scale_fill_gradient2(midpoint = 0, limit = c(-1,1), name="Pearson Correlation")
 ```
 
 ![](Assignment6_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
+``` r
+#Alternitavely, we can make a correlogram or a structured heatmap:
+#library(corrplot)
+#t2 <- corrplot(cc, type = "lower", order = "hclust", main="Correlogram of Pairwise Correlations Between Samples")
+#t2
+
+#This plotting helps with visualizing the higher correlations in R2 as compared to R1, in addition to the outlier pair (R2_24h_BI_protac and R2_24h_control).
+library(RColorBrewer)
+my_group <- as.numeric(as.factor(substr(rownames(cc), 1 , 2)))
+colSide <- brewer.pal(9, "Set1")[my_group]
+colMain <- colorRampPalette(brewer.pal(10, "RdYlBu"))(256)
+heatmap(cc, Colv = NA, Rowv = NA, scale="none", RowSideColors=colSide, ColSideColors=colSide, col=colMain)
+```
+
+![](Assignment6_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->
+
 ### `#?#` *What do you expect the correlations between replicates to look like? Is that what you see? - 2 pt*
 
-\#ANSWER: I would expect two biological independent replicates to show
-very high correlations. This is because repeated measurements of the
-same sample reflect sources of variability between and, potentially,
-within runs, as technical replication identifies measurement errors or
-noise caused by the equipment or protocol. Thus, for a well-replicable
-and repeatable experiment, I would expect the variance of measurements
-within each replicate group to be similar between groups. Indeed, this
-is attested by the heatmap, where the correlation coefficients fall in
-the range of 0.83-0.85 between technical samples from R1 and 0.86-0.90
-between technical samples from R2. Note that there is a possible outlier
-pair in the R2 replicates, namely R2\_24h\_BI\_protac and
-R2\_24h\_control, which have a correlation coefficient of 0.81.
-Nonetheless, the general trend suggests a strong correlation between
-replicates and internally consistent replication.
+\#ANSWER: I would expect the correlations to be high, particularly
+between independent replicates of the same treatment conditions (e.g.,
+R1\_24h\_control and R2\_24h\_control). To begin with, replicated
+measurements of the same settings reflect sources of variability within
+runs, as technical replication identifies measurement errors or noise
+caused by the equipment or protocol. Thus, well-replicable and
+repeatable experiments should have a high correlation, as well as a
+similar variance of measurements within each replicate group. The
+heatmap of this experimental design, which consists of two factors with
+two levels each, confirms these observations. The correlation
+coefficients fall in the range of 0.86-0.89 between replicates of the
+exaxt same treatment conditions (e.g., R1\_24h\_control and
+R2\_24h\_control), and fluctuate from 0.83-0.85 for pairwise
+correlations within R1 (e.g., R1\_24h\_control and R1\_6h\_BI\_protac)
+or 0.86-0.90 for pairwise correlations within R2 (e.g., R2\_6h\_control
+and R2\_6h\_BI\_protac). Note that there is a possible outlier pair in
+the R2 replicates, namely R2\_24h\_BI\_protac and R2\_24h\_control,
+which have a correlation coefficient of 0.81. Nonetheless, the overall
+trend suggests a strong correlation between technical replicates, in
+addition to internally consistent replication. Generally, the replicate
+group (i.e., R1 and R2) seem to be a larger determinant to the
+correlation coefficient than the treatment conditions (i.e., time and
+drug).
 
 ``` r
 #NOTE: We can further inspect the correlation coefficients.
-#Correlation coefficients between replicates of the same sample:
+#Correlation coefficients between replicates of the same sample settings:
 #filter(melt_cc, substring(melt_cc$Var1,3)==substring(melt_cc$Var2,3) & melt_cc$Var1 != melt_cc$Var2)
-#Correlation coefficients between samples of the same group:
+#Correlation coefficients within replicate groups:
 #filter(melt_cc, substr(melt_cc$Var1,0,3)==substr(melt_cc$Var2,0,3) & melt_cc$Var1 != melt_cc$Var2)
 ```
 
@@ -494,6 +528,8 @@ will need to understand what the steps do, so read the appropriate
 documentation. *
 
 ``` r
+#This situation uses an additive model formula to correct for batch effects. The treatment time can be adjusted for differences between the treatment condition (i.e., grouping variable) by using an additive model formula of the form "~treatment+time."
+
 curSamples = samples[match(names(countMatrix), samples$ID),]; #data.frame with current samples, including BI_protac or control and 6h or 24hrs
 y = DGEList(counts=countMatrix, group=curSamples$treatment) #DEGList object made from the table of counts, utilizing a grouping factor that identifies the group membership of each sample based on treatment
 y = calcNormFactors(y) #calculate TMM normalization factors
@@ -713,21 +749,22 @@ abline(h = 0, col = 'blue')
 calcNormFactors() function, which utilizes scaling factors based on the
 weighted trimmed mean of M-values (TMM) to convert raw library sizes
 into effective library sizes. In the MA plots, noticeable discrepancies
-in the number of differentially accessible regions (i.e., red points)
-cannot be observed. However, changes in the curvature of the loess lines
-are particularly noticeable for the allDEStatsPairedTreatControlvsProtac
-dataset, where it suggests that loess normalization is preferable over
-the TMM approach. This occurs because the loess line visually indicates
-the amount of bias in differential accessibility with a fixed threshold
-(M=1 or M=-1), thus a more reliable analysis is achieved when it is
-horizontal at M=0 as observed in the loess-normalized data. Furthermore,
-TMM normalization assumes that most regions of the genome are not truly
-differentially accessible and that signal differences arise from
-technical artifacts or systematic biases in library ATAC distribution,
-but this guaranteee cannot be made for this analysis due to the possible
-biological effects of treatment drugs on chromatin accessibility.
-Lastly, loess normalization also addresses trended bias in addition to
-efficiency bias, so it is a more suitable normalization method.
+in the absolute number or overall distribution of differentially
+accessible regions (i.e., red points) cannot be observed. However,
+changes in the curvature of the loess lines are noticeable, especially
+for the allDEStatsPairedTreatControlvsProtac dataset. This suggests that
+loess normalization is preferable over the TMM approach because the
+loess line is a visual indication of the amount of efficiency bias in
+differential accessibility with a fixed threshold (M=1 or M=-1), thus a
+more reliable analysis is achieved when it is horizontal at M=0.
+Furthermore, TMM normalization assumes that most regions of the genome
+are not truly differentially accessible and that signal differences
+arise from technical artifacts or systematic biases in library ATAC
+distribution, but this assumption cannot be guaranteed due to the
+possible biological effects of treatment drugs on chromatin
+accessibility. Lastly, loess normalization addresses trended bias in
+addition to composition biases between the libraries , so it is a more
+suitable normalization method.
 
 # Part 4: GC bias
 
@@ -844,14 +881,15 @@ v + labs(title= "GC Content vs. CPM per Sample", y = "CPM", x = "GC Content", co
 \#ANSWER: In regions of low (&lt;0.4) or high (&gt;0.7) GC content,
 slight differences are observed in the CPM of each sample. However,
 regions of moderate (0.5-0.6) GC content have a consistent CPM across
-all samples. Since GC content is a fixed property of the genome
-sequence, we should in fact expect to see a similar GC content
-distribution. The slight sample-specific variations must therefore be
-driven by either technical bias or biological conditions. Sources of
-bias such as enzymatic cleavage and PCR amplification have a preference
-towards GC-rich regions, but read count normalization using the loess
-approach removes local extremes caused by insufficient coverage for some
-percentual GC content. Thus, I believe that there will not be a
+all samples and, in general, the curves are similarly shaped. Since GC
+content is a fixed property of the genome sequence, we should in fact
+expect to see a similar GC content distribution. The slight
+sample-specific variations must therefore be driven by either technical
+bias or biological conditions. Sources of bias such as enzymatic
+cleavage and PCR amplification have a preference towards GC-rich
+regions, but read count normalization using the loess approach most
+likely removed the local extremes caused by insufficient coverage for
+some percentual GC content. Thus, I believe that there will not be a
 significant relationship between GC content and logFC in our
 loess-normalized differential accessibility analysis. This hypothesis is
 based on the assumption that the differences observed between samples is
@@ -894,13 +932,13 @@ again observed in regions with very low or very high GC content, where
 logFC appears to vary the most. I believe that we do not need to apply
 GC normalization to account for GC-content effects in this specific
 ATAC-seq analysis because any GC bias is consistent across all libraries
-and will thus cancel out. Furthermore, loess normalization helps in
+and will cancel out. Furthermore, loess normalization helps in
 correcting sample-specific technical artifacts such as enzymatic
 cleavage effects, PCR bias, and duplicate reads. These factors are all
 related to GC content and can bias ATAC analysis, which is largely based
 on logFC metrics. However, in ATAC-seq analyses where the pctGC
 vs. logFC varies more prominantly between samples, a combination of
-normalization factors (e.g., TMM or loess approach in addition to a
+normalization factors (e.g., TMM or loess approach, as well as a
 peak-based GC bias estimate that is calculated separately for each
 sample) should be applied.
 
@@ -923,30 +961,19 @@ normalized**)*
 
 ### `#?#` *Now considering the two comparisons (6 vs 24 hours, and protac vs control). EdgeR performed a correction for MHT, but if we want to analyze the results from both comparisons, do we need to re-adjust to account for the fact that we tested two different hypothesis sets (time and treatment)? Why/not? - 2 pt*
 
-\#ANSWER: Yes, we would need to re-adjust the design to account for the
-fact that different combinations of experimental conditions can have a
-unique effect. Therefore, we must setup a new design matrix that
-considers all the levels of treatment time for each treatment drug
-(i.e., set up an experiment with all combinations of multiple factors).
-In comparison to the original design matrix (designPaired), which was
-formed from an additive model formula without an interaction term, the
-new matrix should be built by combining all the experimental factors
-into a single factor that is defined as a group or by utilizing nested
-interaction formulas. Nonetheless, we must still account for the batch
-effect observed from the MDS plot, in addition to the treatment effects
-over all times. Example of this can be found in section 3.3 of edgeR’s
-user guide, inlcuding:
-
-``` r
-#y = DGEList(counts=countMatrix, group=curSamples$treatment) 
-#y = calcNormFactors(y)
-#design = model.matrix(~curSamples$treatment * curSamples$timeName)
-#y = estimateDisp(y, design)
-#fit = glmQLFit(y, design)
-#qlf = glmQLFTest(fit, coef=2)
-#qlf = glmQLFTest(fit, coef=3)
-#qlf = glmQLFTest(fit, coef=4)
-```
+\#ANSWER: No, we would not need to re-adjust to account for the fact
+that we tested two different hypothesis sets. Instead, we can simply
+compare the “allDEStatsPairedTreatControlvsProtac” and
+“allDEStatsPairedTime6vs24” data sets, which were generated using
+EdgeR’s topTags(). The tables retuned by this function contain the
+Benjamini-Hochberg (BH)-adjusted p-values. This is the appropriate
+method for MHT correction because two distinct glmQLFTests were run for
+each column of the contrast matrix, so the different comparisons (6 vs
+24 hours, and protac vs control) had to be independtely corrected for
+multiple hypothesis testing as a result. However, if the method utilized
+was Bonferroni correction, we should consider gathering both comparisons
+and jointly re-adjusting for MHT by forming new contrasts to find
+regions that are DA between any of the groups.
 
 ### `#?#` *How many differential peaks did you find (FDR&lt;0.01). - 1 pt*
 
@@ -973,7 +1000,7 @@ z <- ggplot(allDEStatsPairedTreatControlvsProtac, aes(x=logFC, y=-log10(PValue),
 z + labs(title= "Volcano Plot of allDEStatsPairedTreatControlvsProtac", color = "Significance")
 ```
 
-![](Assignment6_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
+![](Assignment6_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
 
 ### `#?#` *Plot the logCPM (x axis) by -log10(Pvalue) (y axis), again colouring by FDR&lt;0.01. - 2 pt*
 
@@ -982,7 +1009,7 @@ a <- ggplot(allDEStatsPairedTreatControlvsProtac, aes(x=logCPM, y=-log10(PValue)
 a + labs(title= "Plot of logCPM vs -log10(PValue) for allDEStatsPairedTreatControlvsProtac", color = "Significance")
 ```
 
-![](Assignment6_files/figure-gfm/unnamed-chunk-34-1.png)<!-- -->
+![](Assignment6_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
 
 ### `#?#` *Do you think our initial filtering on peaks with at least 10 reads on average per sample was a good choice? Why or why not?*
 
@@ -997,8 +1024,8 @@ because they lacks enough statistical evidence against the null
 hypothesis to obtain sufficiently low p-values. Lastly, some statistical
 approximations, as well as modelling and hypothesis testing, fail at low
 counts. However, I would suggest filtering on a count-per-million (CPM)
-basis rather than absolute counts, as to avoid favoring regions that are
-accessible in larger libraries over those in smaller libraries.
+basis rather than absolute counts to avoid favoring regions that are
+accessible in larger libraries over those in smaller ones.
 
 *At this point there are many other follow ups you can and would do for
 a real differential analysis, but we leave these as optional exercises.
