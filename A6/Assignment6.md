@@ -438,29 +438,30 @@ heatmap(cc, Colv = NA, Rowv = NA, scale="none", RowSideColors=colSide, ColSideCo
 
 ### `#?#` *What do you expect the correlations between replicates to look like? Is that what you see? - 2 pt*
 
-\#ANSWER: I would expect the correlations to be high, particularly
-between independent replicates of the same treatment conditions (e.g.,
-R1\_24h\_control and R2\_24h\_control). To begin with, replicated
-measurements of the same settings reflect sources of variability within
-runs, as technical replication identifies measurement errors or noise
-caused by the equipment or protocol. Thus, well-replicable and
-repeatable experiments should have a high correlation, as well as a
-similar variance of measurements within each replicate group. The
-heatmap of this experimental design, which consists of two factors with
-two levels each, confirms these observations. The correlation
-coefficients fall in the range of 0.86-0.89 between replicates of the
-exaxt same treatment conditions (e.g., R1\_24h\_control and
-R2\_24h\_control), and fluctuate from 0.83-0.85 for pairwise
-correlations within R1 (e.g., R1\_24h\_control and R1\_6h\_BI\_protac)
-or 0.86-0.90 for pairwise correlations within R2 (e.g., R2\_6h\_control
-and R2\_6h\_BI\_protac). Note that there is a possible outlier pair in
-the R2 replicates, namely R2\_24h\_BI\_protac and R2\_24h\_control,
-which have a correlation coefficient of 0.81. Nonetheless, the overall
-trend suggests a strong correlation between technical replicates, in
-addition to internally consistent replication. Generally, the replicate
-group (i.e., R1 and R2) seem to be a larger determinant to the
-correlation coefficient than the treatment conditions (i.e., time and
-drug).
+\#ANSWER: I would expect the correlations to be high, both between
+independent replicates of the same treatment conditions (e.g.,
+R1\_24h\_control and R2\_24h\_control) and within samples of the same
+replicate group (e.g. R1\_24h\_control, R1\_6h\_control,
+R1\_24h\_BI\_protac, etc.). To begin with, replicated measurements of
+the same settings reflect sources of variability within runs, as
+technical replication identifies measurement errors or noise caused by
+the equipment or protocol. Thus, well-replicable and repeatable
+experiments should have a high correlation, as well as a similar
+variance of measurements within each replicate group. The heatmap of
+this experimental design, which consists of two factors with two levels
+each, confirms these observations. The correlation coefficients fall in
+the range of 0.86-0.89 between replicates of the exaxt same treatment
+conditions (e.g., R1\_24h\_control and R2\_24h\_control), and fluctuate
+from 0.83-0.85 for pairwise correlations within R1 (e.g.,
+R1\_24h\_control and R1\_6h\_BI\_protac) or 0.86-0.90 for pairwise
+correlations within R2 (e.g., R2\_6h\_control and R2\_6h\_BI\_protac).
+Note that there is a possible outlier pair in the R2 replicates, namely
+R2\_24h\_BI\_protac and R2\_24h\_control, which have a correlation
+coefficient of 0.81. Nonetheless, the overall trend suggests a strong
+correlation between technical replicates, in addition to internally
+consistent replication. Generally, the replicate group (i.e., R1 and R2)
+seems to be a larger determinant of the correlation coefficient than the
+treatment conditions (i.e., time and drug).
 
 ``` r
 #NOTE: We can further inspect the correlation coefficients.
@@ -965,15 +966,15 @@ normalized**)*
 that we tested two different hypothesis sets. Instead, we can simply
 compare the “allDEStatsPairedTreatControlvsProtac” and
 “allDEStatsPairedTime6vs24” data sets, which were generated using
-EdgeR’s topTags(). The tables retuned by this function contain the
-Benjamini-Hochberg (BH)-adjusted p-values. This is the appropriate
-method for MHT correction because two distinct glmQLFTests were run for
-each column of the contrast matrix, so the different comparisons (6 vs
-24 hours, and protac vs control) had to be independtely corrected for
-multiple hypothesis testing as a result. However, if the method utilized
-was Bonferroni correction, we should consider gathering both comparisons
-and jointly re-adjusting for MHT by forming new contrasts to find
-regions that are DA between any of the groups.
+EdgeR’s topTags(). By default, this function returns the table with
+Benjamini-Hochberg (BH) adjusted p-values for each QL F-test. This
+choice of MHT correction method was appropriate because two distinct
+glmQLFTests were run for each of the different comparisons (6 vs 24
+hours, and protac vs control), and BH correction was conducted
+separatelty for each one. However, if the method utilized was Bonferroni
+correction, we should consider gathering both comparisons and jointly
+re-adjusting for MHT to find regions that are DA between any of the
+groups.
 
 ### `#?#` *How many differential peaks did you find (FDR&lt;0.01). - 1 pt*
 
