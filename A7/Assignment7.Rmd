@@ -1,0 +1,304 @@
+---
+title: 'Assignment 7: PGS'
+output:
+  github_document:
+    toc: true
+    toc_depth: 4
+---
+
+# Assignment Overview
+
+In this assignment we will learn about population stratification, imputation of genotypes, and using polygenic scores.  Polygenic scores (PGSs) can be useful for predicting disease susceptibility. In order to calculate PGSs, we need two things: GWAS summary statistics (including effect sizes), and genotypes. Most of the time, only a subset of a person's genotypes are actually measured (e.g. via SNP array), and so we must impute the rest using a matched population of fully genotyped individuals. This is the goal of Assignment 7.
+
+Throughout the assignment we will be using a Mini Cohort that has genetic data and some phenotypic variables, together with the 1000 Genomes Project samples. Both datasets are in bfile plink format, which encompasses 3 files: *.bim, .bed and .fam* all the files can be located under the following path: */usr/local/share/data/assignment_7/*
+
+
+# Getting Ready 
+
+In this assignment, we will be using the plink tool extensively. A plink tutorial can be found here: https://zzz.bwh.harvard.edu/plink/tutorial.shtml
+
+```{bash, eval=FALSE}
+
+## Install plink1.9 onto your A1 conda environment:
+#conda install -n BMEDG_1 -c bioconda plink
+
+#ANSWER: First, we must set up server, log into conda environment, and create a directory for this assignment. Then, we can install the tools in our environment.
+
+ssh bkirsh@137.82.55.186
+conda activate test_env
+mkdir assignment7
+cd assignment7
+conda install -c bioconda plink
+
+```
+
+
+# Genotyping Quality Control
+
+
+## General QC
+
+Before we can start working on the genetic data, we need to ensure that the quality is adequate. Thus, we are gonna check the following measuring for our MiniCohort:
+
+   1. **SNP call rate:** The call rate represents the percentage of participants with non-missing data for that SNP. Removing variants with a call rate lower than 95% avoids potential wrong calls to be included in further analysis
+   
+   2. **Minor Allele Frequency:** The minor allele frequency (MAF) echoes the less common allele frequency across the population. The MAF estimates tend to be more accurate for higher MAFs and the population sample size the MAF was based on. If there are too few samples representing the rare-allele, is hard to distinguish between a true rare-allele and sequencing errors.
+   
+   3. **Sample call rate:** Similar to SNP call rate, it allows to filter out all samples exceeding 98% missing genetic variants out of all the  calls. 
+   
+
+```{bash, eval=FALSE}
+## Using only one run of plink 1.9 (with different flags)
+## 1. Filter out -SNPs- with more than 5% missingness
+## 2. Filter out -variants- with less than 1% MAF
+## 3. Filter out -samples- with more than 2% missingness
+## 4. Create an output file in bfile format (which contains the bed, fam and bim files) for the MiniCohort QCed data
+
+#?# Type the command you used below: - 3pt
+
+plink --bfile /usr/local/share/data/assignment_7/Mini_cohort --geno 0.05 --mind 0.02 --maf 0.01 --make-bed --out MiniCohort_QCed
+
+```
+
+
+## Global Ancestry Investigation
+
+In order to enhance imputation accuracy when dealing with ethnically diverse cohorts is important to understand the genetic ancestries of the cohort's participants. Knowing the ancestral populations will ensure that the most closely related population is used as a reference for the imputation. For instance, one would not want to impute haplotypes of an individual of Yoruban ancestry with a population of East Asians because many of the haplotypes will differ between the two ancestries, leading to imputing the wrong variants for the Yoruban person. Hence, we will analyze the global ancestry of our cohort using Principal Component Analysis (PCA). PCA is an unsupervised, unbiased way to reduce the complexity of multidimensional.
+
+## a. PCA-specific QC
+
+We first need to ensure that only the most informative genetic variants are used in the analysis. To do this, we will: 
+
+   1. **Filter out high linkage disequilibrium (LD) regions:** Because high LD regions will add redundancy to the PCA (leading to these regions dominating top PCs), they need to be removed. 
+   
+   2. **LD pruning:** Similarly, LD causes redundancy even outside the particularly problematic high-LD regions. Thus, we will use LD-pruning to identify variants that are in LD, and select one per block.
+   
+```{bash, eval=FALSE}
+
+## Using only one run of plink 1.9 (with different flags)
+## 1. Filter out the high-LD regions contained in the --high_LD_regions_hg19.txt-- file, located in /usr/local/share/data/assignment_7/
+## 2. Use the --indep-pairwise to do LD prunning with the following parameters:
+## - Window size: 200, 
+## - Variant Count: 100 
+## - VIF (variance inflation factor): 0.2 
+#?# Type the command you use to create the Mini Cohort PCA-QCed bfile below: - 1pt
+
+plink --bfile MiniCohort_QCed --extract range /usr/local/share/data/assignment_7/high_LD_regions_hg19.txt --indep-pairwise  200 100 0.2 --make-bed --out MiniCohort_PCA_QCed
+
+## Use the output -.prune.in- file to extract only the informative variants and create a new bfile format (bed, fam and bim files) from:
+## 1. The General MiniCohort QC bfile created before
+## 2. The 1KGP_reference bfile located in /usr.local/share/data/assignment_7/
+
+#?# Type the commands you used below: - 3pt
+# First, we should inspect the file contents to find out that it consists of a list of SNP IDs.
+# head MiniCohort_PCA_QCed.prune.in
+
+plink --bfile MiniCohort_QCed --extract MiniCohort_PCA_QCed.prune.in --make-bed --out MiniCohort_PCA_QCed_pruned
+plink --bfile /usr/local/share/data/assignment_7/1KGP_reference --extract MiniCohort_PCA_QCed.prune.in --make-bed --out 1KGP_reference_pruned
+
+
+```
+
+## b. PCA computation
+
+To assess the ethnic diversity in our cohort, we will use One-thousand Genome Project (1KGP) data as a reference for our PCA analysis. These dataset has genetic information of major continental populations: Admixed American (AMR), European (EU), Asian (AS) and African (A). 
+
+```{bash, eval=FALSE}
+
+## Merge your pruned bfiles of the Mini_cohort and the 1KGP created on the previous step 
+## Remember to create a new bfile (.fam, .bed and .bim files) that contains the merged data.
+## IMPORTANT TIME CONSTRAINT: This step can take ~15 minutes, so make sure to check the server status before you run it!
+#?# Type the command you used below: - 1pt
+
+# I created file called "myFiles.txt," which contains 2 lines describing the files to be merged: 
+#1KGP_reference_pruned.bed       1KGP_reference_pruned.bim       1KGP_reference_pruned.fam
+#MiniCohort_PCA_QCed_pruned.bed  MiniCohort_PCA_QCed_pruned.bim  MiniCohort_PCA_QCed_pruned.fam
+plink --merge-list myFiles.txt --make-bed --out myMergedOut
+
+# Alternatively:
+#plink --bfile MiniCohort_PCA_QCed_pruned --bmerge 1KGP_reference_pruned --make-bed --out merged
+
+#?# Perform a PCA analysis in plink on the merged set - 1 pt
+
+plink --bfile myMergedOut --pca
+
+```
+
+## c. Visualization
+
+```{r}
+
+## Copy the PCA .eigenvec file to your computer, together with the samples_info.txt located in /usr/local/share/data/assignment_7/
+
+#scp bkirsh@137.82.55.186:/home/bkirsh/assignment7/plink.eigenvec /mnt/c/Users/bkirs/Documents/School/BMEG400E/scp
+
+#scp bkirsh@137.82.55.186:/usr/local/share/data/assignment_7/samples_info.txt /mnt/c/Users/bkirs/Documents/School/BMEG400E/scp
+
+## Load the .eigenvec file onto R, change the column names to: FID, IID, PC1, PC2, PC3, ..., PC20
+#?# Type the command you used below: - 1pt
+
+myEigenvec <- read.table("~/School/BMEG400E/scp/plink.eigenvec",sep=" ",header=FALSE)
+n <- 20
+prefix <- "PC"
+suffix <- seq(1:n)
+myPCs <- paste(prefix,suffix,sep="") 
+colnames(myEigenvec) <- c("FID", "IID", myPCs)
+
+## Load the samples_info.txt file onto R, change the column names to: FID, IID, SuperPopulation, Population
+#?# Tyoe the commands you used below: - 1pt
+
+mySamples <- read.table("~/School/BMEG400E/scp/samples_info.txt",sep="\t",header=FALSE)
+colnames(mySamples) <- c("IID", "FID", "SuperPopulation", "Population")
+
+## Merge the .eigenvec and sample_info data.frames together using the IID column
+## Tip: Look into the -merge- function!
+#?# Type the command you used below: - 1pt
+
+myMerged <- merge(myEigenvec, mySamples, by = "IID")
+
+## Using ggplot create a scatterplot, using: 
+## x-axis: PC1
+## y-axis: PC2
+## color: SuperPopulation - to use the Population information to color the samples and be able to appreciate population structure!
+#?# Type the command you used below: 1pt
+
+library(ggplot2)
+p <- ggplot(myMerged, aes(x=PC1, y=PC2, color=SuperPopulation)) + geom_point()
+
+#?# Where do the cohort samples fall? Are they all clustered together? - 1 pt
+
+#ANSWER: The cohort samples fall in a region of overlap with samples from the AMR, SAS, and EUR populations, while the AFR and EAS populations appear to be more graphically separated along the projected plane. With the aid of an interactive scatterplot, we can further isolate the MiniCohort trace and more clearly visualize the arrangement of cohort samples. Their pattern of clustering is similar to that of the AMR population, where the dispersion of data points contrasts with the formation of tight aggregates  observed in the AFR, EAS, EUR, and SAS populations.
+ggplotly(p)
+
+#?# Which Population would you use as a reference for imputation?, Why? - 1 pt
+
+#ANSWER: I would use the AMR population because they colocalize and display a similar distribution pattern as the MiniCohort samples. When applied to population stratification, PCA can be used to reflect genetic variation that occurs due to ancestry in a sample. Thus, samples with similar values for a particular top principal component will have similar ancestry for that axes. Given that PC1 and PC2 capture population structure, similarities between AMR and MiniCohort suggest that the former can be used as a reference for imputation.
+
+#?# Do you think looking at the top two PCs is sufficient to tell what population is best? Why/why not? - 2 pt
+
+#ANSWER: This depends on the amount of variance that we wish to retain. Further inspection reveals that the remaining eigenvalues are considerably and consistently smaller, and that, together, PC1 and PC2 explain 50% of the variance. However, we should not rely entirely on the first two components to explain all stratification, since other components such as PC3 and possibly PC4 might be required as well. 
+
+myEigenval <- scan("~/School/BMEG400E/scp/plink.eigenval")
+pve <- data.frame(PC = 1:20, pve = myEigenval/sum(myEigenval)*100)
+q <- ggplot(pve, aes(PC, pve)) + geom_bar(stat = "identity")
+q + ylab("Percentage Variance Explained")
+cumsum(pve$pve)
+
+```
+
+# Imputation
+
+Imputation of genetic data is a very computationally intensive analysis, that can take a long time. So we have performed it for you. Using the chromosome 17 imputation information located in */usr/local/share/data/assignment_7/* under the *Mini_cohort_chr17_imputation_results.info.gz* we will calculate some post-imputation metrics. 
+
+```{r}
+## Load the Mini_cohort_chr17_imputation_results.info.gz file to your Rstudio environment 
+
+#scp bkirsh@137.82.55.186:/usr/local/share/data/assignment_7/Mini_cohort_chr17_imputation_results.info /mnt/c/Users/bkirs/Documents/School/BMEG400E/scp
+
+myResults <- read.table("~/School/BMEG400E/scp/Mini_cohort_chr17_imputation_results.info",sep="\t",header=TRUE)
+
+## Use the information in the file to answer the following questions. Accompany each of the answers with the code you used to get to them and a brief explanation of your thought process behind.
+#?# What is the percentage of imputed SNPs? 0.5 pt
+
+freq <- 100 * prop.table(table(myResults$Genotyped))
+#ANSWER: The percentage of imputed SNPs is 99.3%.
+
+## The metric of imputation quality is Rsq, this is the estimated value of the squared correlation between imputed and true genotypes. Since true genotypes are not available, this calculation is based on the idea that poorly imputed genotype counts will shrink towards their expectations based on allele frequencies observed in the population (https://genome.sph.umich.edu/wiki/Minimac3_Info_File#Rsq).  An Rsq < 0.3 is often used to flag poorly imputed SNPs. 
+#?# What is the percentage of poorly imputed SNPs?
+
+poorCount <- length(which(myResults$Rsq < 0.3))
+poorFreq <- 100 * (poorCount / nrow(myResults) )
+#ANSWER: The percentage of poorly imputed SNPs is 63.4%.
+
+#?# Create a histogram to visualize the distribution of the MAF - 1 pt
+
+r <- ggplot(myResults, aes(x=MAF)) + geom_histogram()
+r
+
+#?# Which MAF is most frequent? What does that mean? - 1 pt
+
+#ANSWER: The most frequent MAF is zero, meaning that the population is mostly homozygous dominant (i.e., carries two copies of the same dominant allele). 
+
+#?# What is the maximum MAF? Why is that? - 1 pt
+
+maxMAF <- max(myResults$MAF)
+
+#ANSWER: The maximum MAF is 0.5 because the range of minor allele frequency is 0 to 0.5 (i.e., homozygous vs. heterozygous). This is explained by the fact that there are usually only two possible variations, the minor allele and the major allele, but in rare cases there is a third.
+
+```
+
+# Polygenic Scores (PGS) 
+
+A GWAS for affinity for tapas (the Spanish appetizer) was performed and 199 SNPs were found significantly associated. The significant SNPs and their assigned effect sizes are described in the *Tapas_enjoyability_GWAS_sumStats.txt* file. Thanks to the imputation performed in our MiniCohort, we were able to obtain the dosages (double risk alleles=2, one risk allele=1, no risk alleles=0) for each one of the SNPs associated to the Tapas 'enjoyability', described in the *MiniCohort_Tapas_SNPdosages.txt*. 
+
+PGS are calculated by multiplying the effect sizes of each SNP by the dosage of an individual for those SNP and then adding together all the effectSize x dosage. The formula is outlined below, where:
+
+  - i: individual of which you are calculating the PGS
+  
+  - j: SNP that has been found to be associated to the trait (Tapas enjoyability in this case)
+
+  - Beta: Effect size
+
+  - dosage: number of risk alleles the *individual i* has of the *risk allele j*? (2,1 or 0)
+
+![](PGS_formula.png)
+
+```{r}
+
+## Load to your RStudio:
+## 1.  -Tapas_enjoyability_GWAS_sumStats.txt-
+## 2.  -MiniCohort_Tapas_SNPdosages.txt- 
+## Both are located in the A7 directory on github.
+
+#scp bkirsh@137.82.55.186:/usr/local/share/data/assignment_7/Tapas_enjoyability_GWAS_sumStats.txt /mnt/c/Users/bkirs/Documents/School/BMEG400E/scp
+#scp bkirsh@137.82.55.186:/usr/local/share/data/assignment_7/MiniCohort_Tapas_SNPdosages.txt /mnt/c/Users/bkirs/Documents/School/BMEG400E/scp
+
+myEnjoyability <- read.table("~/School/BMEG400E/scp/Tapas_enjoyability_GWAS_sumStats.txt",sep="\t",header=TRUE)
+myDosages <- read.table("~/School/BMEG400E/scp/MiniCohort_Tapas_SNPdosages.txt",sep="\t",header=TRUE)
+
+## Using the base PRS formula outlined below, calculate the Tapas enjoyability PGS for the individuals in the Mini Cohort 
+#?# Include your rationale and the documented code you used - 5pt
+
+PGS.df <- data.frame(IID = character(), PGS = numeric())
+for (a in 1:nrow(myDosages)){
+  i <- myDosages[a,1]
+  sum <- 0
+  for (b in 1:nrow(myEnjoyability)){
+    j <- myEnjoyability[b,1]
+    beta <- myEnjoyability[b,2]
+    dosage <- myDosages[a,which(colnames(myDosages)==j)]
+    sum <- sum + (beta * dosage) 
+  }
+  PGS.df[a,] <- c(i,sum)
+}
+
+#?# Use ggplot to plot the distribution of the Tapas PGS: - 2 pt
+## Include the code and the graph in your analysis! 
+## Tip: http://www.cookbook-r.com/Graphs/Plotting_distributions_(ggplot2)/
+
+
+
+
+#?# What is the distribution of the tapas PGS? - 1pt
+
+
+```
+
+## PGS accuracy
+
+```{r}
+## The Tapas enjoyability was measured in a range of 0-1, with 0 being hating tapas and 1 being completely in love with tapas.
+## This tapas likability is captured in the "Tapas_enjoyability" column of the -MiniCohort_Tapas_SNPdosages.txt- file. 
+#?# Make a scatterplot with a linear regression line, where x is the Tapas-PGS and y is their actual Tapas enjoyability - 2 pt
+## Tip: http://www.sthda.com/english/wiki/ggplot2-scatter-plots-quick-start-guide-r-software-and-data-visualization
+
+
+
+#?# What is the correlation coeficient between the PGS and Tapas enjoyability? Is Spearman or Pearson correlation more appropriate here? Why? - 3 pt
+
+
+#?# How predictive is the PGS for tapas preference? Include in your answer why do you think it is/isn't accurate and what could affect its predicitvity - 2pt 
+
+
+```
+
