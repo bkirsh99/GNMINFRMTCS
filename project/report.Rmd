@@ -1,0 +1,29 @@
+---
+title: 'BMEG 400E/591E Project'
+output:
+  github_document:
+    toc: true
+    toc_depth: 4
+---
+
+# Introduction
+
+# Methods
+
+## Quality Control
+
+## Analysis
+
+
+```{bash, eval=FALSE}
+
+```
+
+
+```{r}
+
+```
+
+# Results
+
+# Conclusions
