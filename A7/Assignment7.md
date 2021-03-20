@@ -40,7 +40,7 @@ tutorial can be found here:
 ## Install plink1.9 onto your A1 conda environment:
 #conda install -n BMEDG_1 -c bioconda plink
 
-#ANSWER: First, we must set up server, log into our conda environment, and create a directory for this assignment. Then, we can install the tools in our environment.
+#ANSWER: First, we must set up server, log into our conda environment, and create a directory for this assignment. Then, we can install the tools in the environment.
 
 ssh bkirsh@137.82.55.186
 conda activate test_env
@@ -130,9 +130,10 @@ plink --bfile MiniCohort_QCed --extract range /usr/local/share/data/assignment_7
 
 #?# Type the commands you used below: - 3pt
 
-#ANSWER: First, we should inspect the file contents to find out what commands and flags to use. Using "head MiniCohort_PCA_QCed.prune.in," we uncover that it consists of a list of SNP IDs, so we can use Plink's "--extract" flag immediately followed by the files' names.
+#ANSWER: First, we should inspect the file contents to find out what commands and flags to use. Using "head MiniCohort_PCA_QCed.prune.in," we discover that it consists of a list of SNP IDs, so we can use Plink's "--extract" flag immediately followed by the files' names.
 
 plink --bfile MiniCohort_QCed --extract MiniCohort_PCA_QCed.prune.in --make-bed --out MiniCohort_PCA_QCed_pruned
+
 plink --bfile /usr/local/share/data/assignment_7/1KGP_reference --extract MiniCohort_PCA_QCed.prune.in --make-bed --out 1KGP_reference_pruned
 ```
 
@@ -149,12 +150,12 @@ Admixed American (AMR), European (EU), Asian (AS) and African (A).
 ## IMPORTANT TIME CONSTRAINT: This step can take ~15 minutes, so make sure to check the server status before you run it!
 #?# Type the command you used below: - 1pt
 
-#ANSWER: First, I created file called "myFiles.txt," which contains 2 lines describing the files to be merged: 
+#ANSWER: First, I created file called "myFiles.txt," which contains 2 tab-separated lines describing the files to be merged: 
 #1KGP_reference_pruned.bed       1KGP_reference_pruned.bim       1KGP_reference_pruned.fam
 #MiniCohort_PCA_QCed_pruned.bed  MiniCohort_PCA_QCed_pruned.bim  MiniCohort_PCA_QCed_pruned.fam
 plink --merge-list myFiles.txt --make-bed --out myMergedOut
 
-#ANSWER: Alternatively, we can simply use "--bmerge."
+#ANSWER: Alternatively, we can use "--bmerge" directly.
 #plink --bfile MiniCohort_PCA_QCed_pruned --bmerge 1KGP_reference_pruned --make-bed --out merged
 
 #?# Perform a PCA analysis in plink on the merged set - 1 pt
@@ -209,7 +210,7 @@ p
 ``` r
 #?# Where do the cohort samples fall? Are they all clustered together? - 1 pt
 
-#ANSWER: The cohort samples fall in a region of coincidence with samples from the AMR, SAS, and EUR populations, while the AFR and EAS populations appear to be distant and more graphically separated along the projected plane. With the aid of an interactive scatterplot, we can further isolate the MiniCohort trace and clearly visualize the arrangement of cohort samples. Their pattern of clustering is similar to that of the AMR population, where the dispersion of data points contrasts with the formation of tight aggregates  observed in the AFR, EAS, EUR, and SAS populations.
+#ANSWER: The cohort samples fall in a region that coincides with samples from the AMR, SAS, and EUR populations. On the other hand, AFR and EAS populations appear to be more distant and graphically separated along the projected plane. With the aid of an interactive scatterplot produced using plotly, we can further isolate the MiniCohort trace to clearly visualize the arrangement of cohort samples. Their pattern of clustering is similar to that of the AMR population, where the dispersion of data points is high, and opposite to that of the AFR, EAS, EUR, and SAS populations, where the formation of tight aggregates is observed.
 #library(plotly)
 #ggplotly(p)
 
@@ -219,23 +220,18 @@ p
 
 #?# Do you think looking at the top two PCs is sufficient to tell what population is best? Why/why not? - 2 pt
 
-#ANSWER: This depends on the amount of variance that we wish to retain. Further inspection reveals that the remaining eigenvalues are considerably and consistently smaller, and that, together, PC1 and PC2 explain 50% of the variance. However, we should not rely entirely on the first two components to explain all stratification, since other components such as PC3 and possibly PC4 might be required to capture more variance. 
+#ANSWER: This depends on the amount of variance that we wish to retain. Further inspection of the eigenvalue data frame reveals that, together, PC1 (33%) and PC2 (17%) explain 50% of the variance. However, we should not rely entirely on the first two components to explain all stratification, since other components such as PC3 (7%) and possibly PC4 (5%) might be required to capture more variance. To validate this, we can make a scree plot that suggests the number of components by identifying the point beyond which the remaining eigenvalues are all relatively small and of comparable size (>=PC5). We can also plot the PCAs for PC3 and PC4 to observe that some populaton structure is still captured, but the same cannot be said for PC5 and PC6.  
 
-myEigenval <- scan("~/School/BMEG400E/scp/plink.eigenval")
-pve <- data.frame(PC = 1:20, pve = myEigenval/sum(myEigenval)*100)
-q <- ggplot(pve, aes(PC, pve)) + geom_bar(stat = "identity")
-q + ylab("Percentage Variance Explained")
+#myEigenval <- scan("~/School/BMEG400E/scp/plink.eigenval")
+#pve <- data.frame(PC = 1:20, pve = myEigenval/sum(myEigenval)*100)
+#q <- ggplot(pve, aes(PC, pve)) + geom_bar(stat = "identity")
+#q + ylab("Percentage Variance Explained")
+#cumsum(pve$pve)
+#p2 <- ggplot(myMerged, aes(x=PC3, y=PC4, color=SuperPopulation)) + geom_point()
+#p2
+#p3 <- ggplot(myMerged, aes(x=PC5, y=PC6, color=SuperPopulation)) + geom_point()
+#p3
 ```
-
-![](Assignment7_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
-
-``` r
-cumsum(pve$pve)
-```
-
-    ##  [1]  33.77726  51.10680  58.55352  64.15504  67.73465  70.88939  73.89459
-    ##  [8]  76.65982  79.14120  81.50620  83.70739  85.79387  87.77945  89.72747
-    ## [15]  91.59528  93.34742  95.04666  96.71686  98.37346 100.00000
 
 # Imputation
 
@@ -257,7 +253,7 @@ myResults <- read.table("~/School/BMEG400E/scp/Mini_cohort_chr17_imputation_resu
 #?# What is the percentage of imputed SNPs? 0.5 pt
 
 freq <- 100 * prop.table(table(myResults$Genotyped))
-#ANSWER: The percentage of imputed SNPs is 99.3%. My thought process behind this was that the Genotyped column assigns a label of "Imputed" or "Genotyped" for each SNP, so a frequency table should inform us about their proportion.
+#ANSWER: The percentage of imputed SNPs is 99.3%. My thought process behind this was that the Genotyped column assigns a label of "Imputed" or "Genotyped" for each SNP, so a frequency table of this variable should inform us about their proportion.
 
 ## The metric of imputation quality is Rsq, this is the estimated value of the squared correlation between imputed and true genotypes. Since true genotypes are not available, this calculation is based on the idea that poorly imputed genotype counts will shrink towards their expectations based on allele frequencies observed in the population (https://genome.sph.umich.edu/wiki/Minimac3_Info_File#Rsq).  An Rsq < 0.3 is often used to flag poorly imputed SNPs. 
 #?# What is the percentage of poorly imputed SNPs?
@@ -285,7 +281,7 @@ r
 
 maxMAF <- max(myResults$MAF)
 
-#ANSWER: The maximum MAF is 0.5. This metric ranges from 0 to 0.5 because it reports the frequency of the minor allele between two possible variations. With the exception of rare cases in which the locus is triallelic or quatrallelic, there are only a minor allele and a major allele for each SNP. Thus, when the frequency of either is greater than 0.5, it is regarded as the major allele and the MAF is calculated for its minor counterpart by subtracting it from 1. An an example, a locus that carries two alleles, A and B, at 0.7 and 0.3 frequency, respectively, will report a MAF of 0.3. This makes A the major allele and B the minor allele.
+#ANSWER: The maximum MAF is 0.5. This metric ranges from 0 to 0.5 because it reports the frequency of the minor allele between two possible alleles, with the exception of rare cases in which the locus is triallelic or quatrallelic. Therefore, in the context of biallelic SNPs, the allele for which the frequency is greater than 0.5 is regarded as the major allele and the MAF is calculated for its minor counterpart by subtracting it from 1. An an example, a locus that carries two alleles, A and B, at 0.7 and 0.3 frequency, respectively, will report a MAF of 0.3. This makes A the major allele and B the minor allele.
 ```
 
 # Polygenic Scores (PGS)
@@ -351,7 +347,7 @@ for (a in 1:nrow(myDosages)){ #Here, we enter the first loop through the rows of
 ## Include the code and the graph in your analysis! 
 ## Tip: http://www.cookbook-r.com/Graphs/Plotting_distributions_(ggplot2)/
 
-#Calculate min, max, range, and central tendency metrics:
+#Calculate min, max, range, and central tendency metrics. Not all will be used or are required for plotting, but can assist in inspecting the data.
 library(modeest) 
 ```
 
@@ -370,7 +366,7 @@ mode <- mlv(PGS.df$score)
     ##             Default method 'shorth' is used
 
 ``` r
-#Approximate the number of bins:
+#Approximate the number of bins. There are various different methods for this so a single one can be chosen or an average can be taken from all.
 k <- 1 + 3.22 * log(nrow(PGS.df)) #Sturge's Rule (15)
 k <- 2 * nrow(PGS.df) ** (1/3) #Rice's Rule (8)
 k <- 3.49 * sd(PGS.df$score) * nrow(PGS.df) ** (-1/3) #Scott's Rule (10)
@@ -385,7 +381,7 @@ s
 
 ``` r
 #?# What is the distribution of the tapas PGS? - 1pt
-#ANSWE: The distribution is approximately normal. The curve is bell-shaped and symmetrical about the mean, median, and mode, all of which coincide in the plot.
+#ANSWER: The distribution is approximately normal. The curve is bell-shaped and symmetrical about the mean, median, and mode, all of which coincide in the plot.
 ```
 
 ## PGS accuracy
@@ -414,5 +410,5 @@ c <- cor(PGS_actual.df$score,PGS_actual.df$Tapas_enjoyability)
 
 #?# How predictive is the PGS for tapas preference? Include in your answer why do you think it is/isn't accurate and what could affect its predicitvity - 2pt 
 
-#ANSWER: The PGS does not accurately predict tapas preference. For one, enjoyability is subjective and socially constructed, which means that this variable is heavily influenced by cultural and environmental factors. Furthermore, accurate assessment requires us to address the ascertainment bias caused by over-representation of European populations in genotyping arrays and GWAS samples. Thus, another major factor that could affect predictivity is that risk can be grossly misestimated in our ethnically diverse MiniCohort simply because certain populations are not as familiar with the Spanish appetizer. 
+#ANSWER: The PGS does not accurately predict tapas preference. This is because tapas enjoyability is highly subjective and socially constructed, meaning that it can be influenced by cultural and environmental factors rather than solely explained by genetics. Furthermore, accurate assessment of GWAS data would require us to address the ascertainment bias caused by over-representation of European populations in genotyping arrays and GWAS samples. Thus, another major factor that could affect predictivity is that tapas preference can be grossly misestimated in our ethnically diverse MiniCohort due to an European-centric skew. Having a singular population that is more familiar, and perhaps more inclined towards the Spanish appetizer, can bias the entire downstream analysis.
 ```
